@@ -28,9 +28,11 @@ export default function ShopifyPage() {
 
   useEffect(() => {
     fetchShops();
-  }, []);
+  }, [currentCompanyId]);
 
   const fetchShops = async () => {
+    if (!currentCompanyId) return;
+
     setLoading(true);
     try {
       // Build base URL
@@ -54,8 +56,13 @@ export default function ShopifyPage() {
 
   const handleConnect = () => {
     const user_id = user?.id || "";
-    const company_id = user?.company_id || ""; // assuming user object has company_id
+    const company_id = currentCompanyId || user?.company_id || "";
     const baseUrl = import.meta.env.VITE_API_URL || "";
+
+    if (!user_id || !company_id) {
+      notify("error", "Please select a company before connecting Shopify.");
+      return;
+    }
     
     const oauthUrl = `${baseUrl}/shopify/auth?user_id=${encodeURIComponent(user_id)}&company_id=${encodeURIComponent(company_id)}`;
     

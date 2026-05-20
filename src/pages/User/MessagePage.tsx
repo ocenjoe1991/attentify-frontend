@@ -105,17 +105,20 @@ export default function MessagePage() {
     if (!currentCompanyId) return;
 
     const fetchMembers = async () => {
-      const response = await axios.get(
-        `${import.meta.env.VITE_API_URL || ""}/company/${currentCompanyId}/active_members`,
-        {
-          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-        }
-      );
-      const data = response.data;
-      if (data) {
-        setMembers(data || []);
+      try {
+        const response = await axios.get(
+          `${import.meta.env.VITE_API_URL || ""}/company/${currentCompanyId}/active_members`,
+          {
+            headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+          }
+        );
+        setMembers(response.data || []);
+      } catch (error) {
+        console.error("Failed to load active members:", error);
+        setMembers([]);
       }
     };
+
     fetchMembers();
   }, [currentCompanyId]);
 
@@ -124,6 +127,8 @@ export default function MessagePage() {
   }, [setTitle]);
 
   const fetchMessages = async () => {
+    if (!currentCompanyId) return;
+
     setLoading(true);
     try {
       const response = await axios.get(
@@ -151,7 +156,7 @@ export default function MessagePage() {
 
   useEffect(() => {
     fetchMessages();
-  }, [currentPage, pageSize, search]);
+  }, [currentCompanyId, currentPage, pageSize, search]);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
