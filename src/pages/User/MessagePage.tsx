@@ -485,7 +485,7 @@ export default function MessagePage() {
                 <th className="px-6 py-3 w-2/10 text-left">Ticket</th>
                 <th className="px-6 py-3 w-1/10 text-left">Assigned</th>
                 <th className="px-6 py-3 w-1/10 text-left">Status</th>
-                <th className="px-6 py-3 w-2/10 text-left">
+                <th className="px-6 py-3 w-2/10 text-center">
                   Last Updated
                 </th>
               </tr>
@@ -651,7 +651,7 @@ export default function MessagePage() {
                         </div>
                       )}
                     </td>
-                    <td className="px-6 py-4 w-2/10 text-sm text-gray-500 text-left">
+                    <td className="px-6 py-4 w-2/10 text-sm text-gray-500 text-center">
                       {new Date(msg.last_updated).toLocaleDateString()}
 
                       {/* Trash button (hidden until hover) */}
