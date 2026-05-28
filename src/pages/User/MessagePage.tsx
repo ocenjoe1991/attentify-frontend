@@ -309,18 +309,26 @@ export default function MessagePage() {
 
     setSyncingGmail(true);
     try {
-      await axios.post(
+      const response = await axios.post(
         `${import.meta.env.VITE_API_URL || ""}/message/fetch-all`,
         { company_id: currentCompanyId },
         {
           headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
         }
       );
-      notify("success", "Gmail inbox synced.");
+      const syncedCount = response.data?.result?.reduce(
+        (total: number, item: { stored_count?: number }) => total + (item.stored_count || 0),
+        0
+      );
+      notify("success", syncedCount ? `Gmail synced. ${syncedCount} new messages added.` : "Gmail synced. No new messages found.");
       fetchMessages();
-    } catch (error) {
+    } catch (error: any) {
       console.error("Failed to sync Gmail:", error);
-      notify("error", "Failed to sync Gmail.");
+      const detail = error?.response?.data?.detail;
+      const message = Array.isArray(detail)
+        ? detail.map((item) => item.message || item.reason).filter(Boolean).join(" ")
+        : "Failed to sync Gmail.";
+      notify("error", message || "Failed to sync Gmail.");
     } finally {
       setSyncingGmail(false);
     }
