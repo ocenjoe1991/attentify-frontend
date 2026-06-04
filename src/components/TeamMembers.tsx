@@ -8,13 +8,21 @@ import axios from "axios";
 import ConfirmDialog from "./ConfirmDialog";
 
 type Role = "company_owner" | "store_owner" | "agent" | "readonly";
+type CustomPermission = "permanent_delete_ticket";
 
 interface Member {
   id: string;
   email: string;
   role: Role;
   status: "active" | "pending";
+  custom_permissions?: CustomPermission[];
 }
+
+const customPermissions: { key: CustomPermission; label: string }[] = [
+  { key: "permanent_delete_ticket", label: "Permanently delete ticket" },
+];
+
+const sortedPermissions = (permissions: string[] = []) => [...permissions].sort().join("|");
 
 export default function TeamMembers() {
   const { currentCompanyId } = useCompany();
@@ -27,6 +35,7 @@ export default function TeamMembers() {
   const [hasChanges, setHasChanges] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
   const [selectedMember, setSelectedMember] = useState<Member | null>(null);
+  const canManageMembers = user?.role === "admin" || user?.role === "company_owner";
 
   const fetchMembers = async () => {
     try {
@@ -60,16 +69,45 @@ export default function TeamMembers() {
     setMembers(updated);
 
     // Detect if changes exist
-    const changed = updated.some(
-      (m, i) => m.role !== originalMembers[i]?.role
-    );
-    setHasChanges(changed);
+    setHasChanges(hasMemberChanges(updated));
+  };
+
+  const hasMemberChanges = (updatedMembers: Member[]) =>
+    updatedMembers.some((member, index) => {
+      const original = originalMembers[index];
+      return (
+        member.role !== original?.role ||
+        sortedPermissions(member.custom_permissions) !== sortedPermissions(original?.custom_permissions)
+      );
+    });
+
+  const handlePermissionChange = (index: number, permission: CustomPermission) => {
+    const updated = members.map((member, memberIndex) => {
+      if (memberIndex !== index) return member;
+
+      const permissions = member.custom_permissions || [];
+      return {
+        ...member,
+        custom_permissions: permissions.includes(permission)
+          ? permissions.filter((item) => item !== permission)
+          : [...permissions, permission],
+      };
+    });
+
+    setMembers(updated);
+    setHasChanges(hasMemberChanges(updated));
   };
 
   const handleSaveChanges = async () => {
     try {
       const changedMembers = members.filter(
-        (m, i) => m.role !== originalMembers[i]?.role
+        (member, index) => {
+          const original = originalMembers[index];
+          return (
+            member.role !== original?.role ||
+            sortedPermissions(member.custom_permissions) !== sortedPermissions(original?.custom_permissions)
+          );
+        }
       );
       
       
@@ -77,10 +115,12 @@ export default function TeamMembers() {
       await Promise.all(
         changedMembers.map((member) =>
           axios.post(
-            `${import.meta.env.VITE_API_URL}/membership/update`,
+            `${import.meta.env.VITE_API_URL}/company/update-member`,
             {
-              membership_id: member.id,
+              id: member.id,
               role: member.role,
+              status: member.status,
+              custom_permissions: member.custom_permissions || [],
             },
             {
               headers: {
@@ -162,7 +202,7 @@ export default function TeamMembers() {
             specify member roles to enhance security.
           </p>
         </div>
-        <RoleWrapper allowedRoles={["company_owner"]} userRole={user?.role || "agent"}>
+        <RoleWrapper allowedRoles={["admin", "company_owner"]} userRole={user?.role || "agent"}>
           <button
             onClick={handleAddMember}
             className="px-4 py-2 bg-blue-600 text-white text-sm font-medium hover:bg-blue-700"
@@ -178,8 +218,9 @@ export default function TeamMembers() {
             <tr className="bg-gray-100 text-left">
               <th className="px-4 py-2 border-b border-gray-300">Member Email</th>
               <th className="px-4 py-2 border-b border-gray-300">Role</th>
+              <th className="px-4 py-2 border-b border-gray-300">Custom Permissions</th>
               <th className="px-4 py-2 border-b border-gray-300">Status</th>
-              <RoleWrapper allowedRoles={["company_owner"]} userRole={user?.role || "agent"}>
+              <RoleWrapper allowedRoles={["admin", "company_owner"]} userRole={user?.role || "agent"}>
                 <th className="px-4 py-2 border-b border-gray-300">Actions</th>
               </RoleWrapper>
             </tr>
@@ -189,7 +230,7 @@ export default function TeamMembers() {
               <tr key={member.id} className="border-b border-gray-200">
                 <td className="px-4 py-2">{member.email}</td>
                 <td className="px-4 py-2">
-                  { user?.role == "company_owner"?
+                  { canManageMembers?
                     ( 
                       <select
                         value={member.role}
@@ -210,8 +251,24 @@ export default function TeamMembers() {
                     )
                   }
                 </td>
+                <td className="px-4 py-2">
+                  <div className="flex flex-col gap-2">
+                    {customPermissions.map((permission) => (
+                      <label key={permission.key} className="inline-flex items-center gap-2 text-sm text-gray-700">
+                        <input
+                          type="checkbox"
+                          checked={(member.custom_permissions || []).includes(permission.key)}
+                          onChange={() => handlePermissionChange(index, permission.key)}
+                          disabled={!canManageMembers}
+                          className="h-4 w-4 text-blue-600 border-gray-300"
+                        />
+                        {permission.label}
+                      </label>
+                    ))}
+                  </div>
+                </td>
                 <td className="px-4 py-2">{renderStatusTag(member.status)}</td>
-                <RoleWrapper allowedRoles={["company_owner"]} userRole={user?.role || "agent"}>
+                <RoleWrapper allowedRoles={["admin", "company_owner"]} userRole={user?.role || "agent"}>
                   <td className="px-4 py-2">
                     <button
                       onClick={() => onDelete(member.id)}
@@ -228,7 +285,7 @@ export default function TeamMembers() {
       </div>
 
       {hasChanges && (
-        <RoleWrapper allowedRoles={["company_owner"]} userRole={user?.role || "agent"}>
+        <RoleWrapper allowedRoles={["admin", "company_owner"]} userRole={user?.role || "agent"}>
           <div className="flex justify-end gap-3 mt-4">
             <button
               onClick={handleSaveChanges}

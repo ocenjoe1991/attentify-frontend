@@ -101,8 +101,8 @@ const defaultMessagePreferences = {
   sortOrder: "desc" as SortOrder,
 };
 
-const defaultPermanentDeleteRoles = ["company_owner", "store_owner"];
 const ownerRoles = ["company_owner", "store_owner"];
+const permanentDeletePermission = "permanent_delete_ticket";
 
 function loadMessagePreferences() {
   try {
@@ -145,11 +145,11 @@ export default function MessagePage() {
   const [sortOrder, setSortOrder] = useState<SortOrder>(savedPreferences.sortOrder);
   const [totalPages, setTotalPages] = useState(1);
   const [syncingGmail, setSyncingGmail] = useState(false);
-  const [permanentDeleteRoles, setPermanentDeleteRoles] = useState<string[]>(defaultPermanentDeleteRoles);
+  const [customPermissions, setCustomPermissions] = useState<string[]>([]);
   const statusFilterOptions = getStatusFilterOptions(viewMode);
   const userRole = user?.role || "agent";
   const canMoveMessages = ownerRoles.includes(userRole);
-  const canPermanentlyDeleteMessages = permanentDeleteRoles.includes(userRole);
+  const canPermanentlyDeleteMessages = canMoveMessages || customPermissions.includes(permanentDeletePermission);
   const effectiveStatusFilter =
     statusFilter === "all" || statusFilterOptions.includes(statusFilter)
       ? statusFilter
@@ -204,10 +204,10 @@ export default function MessagePage() {
             headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
           }
         );
-        setPermanentDeleteRoles(response.data?.message_permanent_delete_roles || defaultPermanentDeleteRoles);
+        setCustomPermissions(response.data?.current_user_custom_permissions || []);
       } catch (error) {
         console.error("Failed to load company delete policy:", error);
-        setPermanentDeleteRoles(defaultPermanentDeleteRoles);
+        setCustomPermissions([]);
       }
     };
 
