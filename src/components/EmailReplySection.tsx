@@ -25,7 +25,10 @@ const EmailReplySection: React.FC<EmailReplyProps> = ({
       try {
         await axios.post(
           `${import.meta.env.VITE_API_URL || ""}/message/${threadId}/reply`,
-          { content: reply }
+          { content: reply },
+          {
+            headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+          }
         );
         setReply("");
         //setMessage(response.data);

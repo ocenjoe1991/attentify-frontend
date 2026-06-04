@@ -231,7 +231,7 @@ const Comments: React.FC<CommentsProps> = ({ messageId, pComments }) => {
               </div>
 
               {/* Actions (hide while editing) */}
-              {editingId !== c.id && user?.id == c.user_id && c.status !== "Resolved" && (
+              {editingId !== c.id && c.status !== "Resolved" && (
                 <div className="flex gap-2">
                   {c.status === "Awaiting Approval" &&
                     (user?.role === "company_owner" || user?.role === "store_owner") && (
@@ -242,18 +242,22 @@ const Comments: React.FC<CommentsProps> = ({ messageId, pComments }) => {
                         Approve
                       </button>
                     )}
-                  <button
-                    onClick={() => startEdit(c)}
-                    className="text-blue-600 hover:underline text-sm"
-                  >
-                    Edit
-                  </button>
-                  <button
-                    onClick={() => deleteComment(c.id)}
-                    className="text-red-600 hover:underline text-sm"
-                  >
-                    Delete
-                  </button>
+                  {user?.id == c.user_id && (
+                    <>
+                      <button
+                        onClick={() => startEdit(c)}
+                        className="text-blue-600 hover:underline text-sm"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        onClick={() => deleteComment(c.id)}
+                        className="text-red-600 hover:underline text-sm"
+                      >
+                        Delete
+                      </button>
+                    </>
+                  )}
                 </div>
               )}
             </div>

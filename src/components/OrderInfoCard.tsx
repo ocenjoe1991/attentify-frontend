@@ -10,6 +10,7 @@ interface OrderInfoCardProps {
   order: OrderInfo | null;
   loading: boolean;
   error: string | null;
+  messageId?: string;
   orderOptions: any;
   onOrderNameChanged: (orderName: string) => void;
   showConfirmButton: boolean,
@@ -43,6 +44,7 @@ const OrderInfoCard: React.FC<OrderInfoCardProps> = ({
   order, 
   loading, 
   error, 
+  messageId,
   orderOptions, 
   onOrderNameChanged, 
   showConfirmButton, 
@@ -58,6 +60,11 @@ const OrderInfoCard: React.FC<OrderInfoCardProps> = ({
       message: "Are you sure you want to cancel this order?",
     });
     if (!ok) return;
+    const note = window.prompt("Enter the cancellation reason:");
+    if (!note?.trim()) {
+      notify("error", "Cancellation reason is required.");
+      return;
+    }
 
     try {
       const response = await axios.post(
@@ -65,6 +72,8 @@ const OrderInfoCard: React.FC<OrderInfoCardProps> = ({
         {
           order_id: order?.shopify_order?.order_id || "",
           shop: order?.shopify_order?.shop || "",
+          note,
+          message_id: messageId,
         },
         {
           headers: {
@@ -77,7 +86,7 @@ const OrderInfoCard: React.FC<OrderInfoCardProps> = ({
         response.data?.msg ||
         response.data?.message ||
         "Order cancelled successfully!";
-      notify("success", msg);
+      notify(response.data?.approval_required ? "success" : "success", msg);
     } catch (error: any) {
       let errorMsg = "Order cancellation failed.";
 
@@ -263,7 +272,7 @@ const OrderInfoCard: React.FC<OrderInfoCardProps> = ({
       </div>
 
       {showRefundModal && (
-        <RefundModal order={order} onClose={() => setShowRefundModal(false)} />
+        <RefundModal order={order} messageId={messageId} onClose={() => setShowRefundModal(false)} />
       )}
     </>
   );

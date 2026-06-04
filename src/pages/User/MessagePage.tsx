@@ -60,15 +60,19 @@ interface Member {
 
 const statusList = [
   "Open",
+  "Assigned",
+  "In Progress",
   "Pending",
   "Resolved",
   "Escalated",
   "Awaiting Approval",
-  "Cancelled",
+  "Canceled",
 ];
 
 const inboxStatusList = [
   "Open",
+  "Assigned",
+  "In Progress",
   "Pending",
   "Escalated",
   "Awaiting Approval",
@@ -76,7 +80,7 @@ const inboxStatusList = [
 
 const archivedStatusList = [
   "Resolved",
-  "Cancelled",
+  "Canceled",
 ];
 
 const getStatusFilterOptions = (mode: ViewMode) => {
@@ -96,6 +100,9 @@ const defaultMessagePreferences = {
   sortBy: "last_updated" as SortBy,
   sortOrder: "desc" as SortOrder,
 };
+
+const defaultPermanentDeleteRoles = ["company_owner", "store_owner"];
+const ownerRoles = ["company_owner", "store_owner"];
 
 function loadMessagePreferences() {
   try {
@@ -138,7 +145,11 @@ export default function MessagePage() {
   const [sortOrder, setSortOrder] = useState<SortOrder>(savedPreferences.sortOrder);
   const [totalPages, setTotalPages] = useState(1);
   const [syncingGmail, setSyncingGmail] = useState(false);
+  const [permanentDeleteRoles, setPermanentDeleteRoles] = useState<string[]>(defaultPermanentDeleteRoles);
   const statusFilterOptions = getStatusFilterOptions(viewMode);
+  const userRole = user?.role || "agent";
+  const canMoveMessages = ownerRoles.includes(userRole);
+  const canPermanentlyDeleteMessages = permanentDeleteRoles.includes(userRole);
   const effectiveStatusFilter =
     statusFilter === "all" || statusFilterOptions.includes(statusFilter)
       ? statusFilter
@@ -180,6 +191,27 @@ export default function MessagePage() {
     };
 
     fetchMembers();
+  }, [currentCompanyId]);
+
+  useEffect(() => {
+    if (!currentCompanyId) return;
+
+    const fetchCompanySettings = async () => {
+      try {
+        const response = await axios.get(
+          `${import.meta.env.VITE_API_URL || ""}/company/${currentCompanyId}`,
+          {
+            headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+          }
+        );
+        setPermanentDeleteRoles(response.data?.message_permanent_delete_roles || defaultPermanentDeleteRoles);
+      } catch (error) {
+        console.error("Failed to load company delete policy:", error);
+        setPermanentDeleteRoles(defaultPermanentDeleteRoles);
+      }
+    };
+
+    fetchCompanySettings();
   }, [currentCompanyId]);
 
   useEffect(() => {
@@ -275,7 +307,7 @@ export default function MessagePage() {
         return inboxStatusList.includes(msg.status) && !msg.trashed;
       }
       if (viewMode === "archived") {
-        return archivedStatusList.includes(msg.status) && !msg.trashed;
+        return (msg.archived || archivedStatusList.includes(msg.status)) && !msg.trashed;
       }
       if (viewMode === "trashed") {
         return msg.trashed;
@@ -387,6 +419,15 @@ export default function MessagePage() {
   };
 
   const handleDelete = async (id: string) => {
+    if (viewMode === "trashed" && !canPermanentlyDeleteMessages) {
+      notify("error", "Permanent delete is not enabled for your role.");
+      return;
+    }
+    if (viewMode !== "trashed" && !canMoveMessages) {
+      notify("error", "Only owners can move messages to trash.");
+      return;
+    }
+
     try {
       if (viewMode === "trashed") {
         await axios.delete(
@@ -412,6 +453,25 @@ export default function MessagePage() {
       fetchMessages();
     } catch (error) {
       notify("error", "Failed to delete message. Please try again.");
+    }
+  };
+
+  const handleArchive = async (id: string, archived: boolean) => {
+    try {
+      await axios.patch(
+        `${import.meta.env.VITE_API_URL}/message/${id}`,
+        {
+          field: "archived",
+          value: archived,
+        },
+        {
+          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+        }
+      );
+      notify("success", archived ? "Message archived." : "Message restored to inbox.");
+      fetchMessages();
+    } catch (error) {
+      notify("error", "Failed to update archive status. Please try again.");
     }
   };
 
@@ -610,7 +670,7 @@ export default function MessagePage() {
                     </td>
                     {/* Assigned */}
                     <td className="px-6 py-4 w-1/10">
-                      {["company_owner", "store_owner"].includes(user?.role || "agent") ? (
+                      {ownerRoles.includes(userRole) ? (
                         <button
                           className="flex items-center gap-2 px-2 py-1 bg-gray-100 hover:bg-blue-50 rounded cursor-pointer"
                           onClick={() => handleAssignMenuOpen(msg._id)}
@@ -684,7 +744,7 @@ export default function MessagePage() {
                     </td>
                     {/* Status */}
                     <td className="px-6 py-4 w-1/10">
-                      {["company_owner", "store_owner"].includes(user?.role || "agent") ? (
+                      {ownerRoles.includes(userRole) ? (
                         // Clickable status button for allowed roles
                         <button
                           className={`px-3 py-1 text-xs font-semibold rounded ${
@@ -739,14 +799,26 @@ export default function MessagePage() {
                     <td className="px-6 py-4 w-2/10 text-sm text-gray-500 text-center">
                       {new Date(msg.last_updated).toLocaleDateString()}
 
-                      {/* Trash button (hidden until hover) */}
-                      <button
-                        onClick={() => handleDelete(msg._id)}
-                        className="hidden group-hover:flex items-center justify-center absolute right-3 top-1/2 -translate-y-1/2 p-2 rounded-full text-gray-400 hover:text-red-600 hover:bg-red-50 transition"
-                        aria-label="Delete message"
-                      >
-                        <TrashIcon className="w-6 h-6" />
-                      </button>
+                      <div className="hidden group-hover:flex absolute right-3 top-1/2 -translate-y-1/2 items-center gap-1">
+                        {viewMode !== "trashed" && canMoveMessages && (
+                          <button
+                            onClick={() => handleArchive(msg._id, viewMode !== "archived")}
+                            className="flex items-center justify-center p-2 rounded-full text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition"
+                            aria-label={viewMode === "archived" ? "Unarchive message" : "Archive message"}
+                          >
+                            <ArchiveBoxArrowDownIcon className="w-6 h-6" />
+                          </button>
+                        )}
+                        {(viewMode !== "trashed" ? canMoveMessages : canPermanentlyDeleteMessages) && (
+                          <button
+                            onClick={() => handleDelete(msg._id)}
+                            className="flex items-center justify-center p-2 rounded-full text-gray-400 hover:text-red-600 hover:bg-red-50 transition"
+                            aria-label={viewMode === "trashed" ? "Permanently delete message" : "Delete message"}
+                          >
+                            <TrashIcon className="w-6 h-6" />
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))

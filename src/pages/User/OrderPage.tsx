@@ -102,6 +102,7 @@ export default function OrderPage() {
           shop: selectedShop,
           company_id: currentCompanyId, 
         },
+        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
       });
 
       setOrders(res.data.orders);
@@ -139,9 +140,16 @@ export default function OrderPage() {
   };
 
   const handleSyncOrders = async () => {
+    if (!currentCompanyId) return;
     setLoading(true);
     try {
-      await axios.post(`${import.meta.env.VITE_API_URL || ""}/shopify/orders/sync`);
+      await axios.post(
+        `${import.meta.env.VITE_API_URL || ""}/shopify/orders/sync`,
+        { company_id: currentCompanyId },
+        {
+          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+        }
+      );
       await fetchOrders();
     } catch (err) {
       console.error("Failed to sync orders", err);

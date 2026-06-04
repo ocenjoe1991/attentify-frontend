@@ -48,7 +48,10 @@ const MessageDetailPage = () => {
       hasFetchedMessage.current = true;
       try {
         const response = await axios.get(
-          `${import.meta.env.VITE_API_URL || ""}/message/${threadId}`
+          `${import.meta.env.VITE_API_URL || ""}/message/${threadId}`,
+          {
+            headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+          }
         );
         setMessage(response.data);
 
@@ -81,7 +84,10 @@ const MessageDetailPage = () => {
         setError(null);
         const response = await axios.post(
           (import.meta.env.VITE_API_URL || "") + "/message/analyze",
-          { message_id: message._id }
+          { message_id: message._id },
+          {
+            headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+          }
         );
         setOrderInfo(response.data);
         if (response.data?.msg === 'Email not matched') {
@@ -116,6 +122,7 @@ const MessageDetailPage = () => {
             company_id: currentCompanyId,
             email,
           },
+          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
         });
         setOrderOptions(res.data.orders.map((item: any) => ({ value: item.name, label: item.name })));
       } catch (err) {
@@ -221,6 +228,7 @@ const MessageDetailPage = () => {
                 order={orderInfo}
                 loading={loadingOrder}
                 error={error}
+                messageId={message?._id}
                 orderOptions={orderOptions}
                 onOrderNameChanged={(orderNumber) => {
                   (async () => {
@@ -234,6 +242,7 @@ const MessageDetailPage = () => {
                           shop: "",
                           company_id: currentCompanyId,
                         },
+                        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
                       });
                       setOrderInfo((prevState) => {
                         if (!prevState) {
@@ -260,6 +269,8 @@ const MessageDetailPage = () => {
                     await axios.put(`${import.meta.env.VITE_API_URL || ""}/message/${message?._id}`, {
                       "order_info.order_id": orderInfo?.order_id,
                       "order_info.confirmed": true,
+                    }, {
+                      headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
                     });
                     setMessage((prevState) => {
                       if (!prevState || !prevState.order_info || !orderInfo) {

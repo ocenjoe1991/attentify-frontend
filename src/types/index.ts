@@ -25,7 +25,16 @@ export type Message = {
 
   started_at: string;
   last_updated: string;
-  status: "open" | "closed" | "pending";
+  status:
+    | "Open"
+    | "Assigned"
+    | "In Progress"
+    | "Pending"
+    | "Resolved"
+    | "Escalated"
+    | "Awaiting Approval"
+    | "Canceled";
+  archived?: boolean;
   channel: "chat" | "sms" | "email" | "voice";
   title?: string;
   ticket?: string;

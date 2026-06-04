@@ -6,6 +6,16 @@ import { useNotification } from "../context/NotificationContext";
 import { useUser } from "../context/UserContext";
 import RoleWrapper from "../components/RoleWrapper"; 
 
+const roleOptions = [
+  { key: "company_owner", label: "Company Owner" },
+  { key: "store_owner", label: "Store Owner" },
+  { key: "agent", label: "Agent" },
+  { key: "readonly", label: "Readonly" },
+];
+
+const defaultPermanentDeleteRoles = ["company_owner", "store_owner"];
+const ownerRoles = ["company_owner", "store_owner"];
+
 export default function GeneralSettings() {
   const { currentCompanyId } = useCompany();
   const { notify } = useNotification();
@@ -25,6 +35,9 @@ export default function GeneralSettings() {
 
   const [emailDraft, setEmailDraft] = useState(email);
   const [emailEdit, setEmailEdit] = useState(false);
+  const [permanentDeleteRoles, setPermanentDeleteRoles] = useState<string[]>(defaultPermanentDeleteRoles);
+  const [permanentDeleteRolesDraft, setPermanentDeleteRolesDraft] = useState<string[]>(defaultPermanentDeleteRoles);
+  const [deletePolicySaving, setDeletePolicySaving] = useState(false);
 
   useEffect(() => {
     if (!currentCompanyId) return;
@@ -45,6 +58,10 @@ export default function GeneralSettings() {
 
           setEmail(data.email || "");
           setEmailDraft(data.email || "");
+
+          const deleteRoles = data.message_permanent_delete_roles || defaultPermanentDeleteRoles;
+          setPermanentDeleteRoles(deleteRoles);
+          setPermanentDeleteRolesDraft(deleteRoles);
         }
       } catch (error) {
         console.error("Error fetching company settings:", error);
@@ -99,6 +116,36 @@ export default function GeneralSettings() {
     } catch (error) {
       console.error(`Failed to save ${field}:`, error);
       notify("error", `Failed to save ${field}. Please try again.`);
+    }
+  };
+
+  const togglePermanentDeleteRole = (role: string) => {
+    setPermanentDeleteRolesDraft((current) =>
+      current.includes(role)
+        ? current.filter((item) => item !== role)
+        : [...current, role]
+    );
+  };
+
+  const saveDeletePolicy = async () => {
+    setDeletePolicySaving(true);
+    try {
+      const response = await axios.put(
+        `${import.meta.env.VITE_API_URL || ""}/company/${currentCompanyId}/message-delete-policy`,
+        { message_permanent_delete_roles: permanentDeleteRolesDraft },
+        {
+          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+        }
+      );
+      const deleteRoles = response.data.message_permanent_delete_roles || defaultPermanentDeleteRoles;
+      setPermanentDeleteRoles(deleteRoles);
+      setPermanentDeleteRolesDraft(deleteRoles);
+      notify("success", "Permanent delete permissions updated.");
+    } catch (error: any) {
+      console.error("Failed to save delete policy:", error);
+      notify("error", error?.response?.data?.detail || "Failed to save delete permissions.");
+    } finally {
+      setDeletePolicySaving(false);
     }
   };
 
@@ -278,6 +325,54 @@ export default function GeneralSettings() {
                   disableSave={!emailDraft.trim()}
                 />
               )}
+            </div>
+          </RoleWrapper>
+        </div>
+      </div>
+
+      <div className="flex flex-col sm:flex-row justify-between items-start gap-4 relative">
+        <label className="text-lg font-medium text-gray-700 min-w-[100px]">
+          Message Delete
+          <p className="mt-1 text-xs font-normal text-gray-500 max-w-[250px]">
+            Roles allowed to permanently delete messages from trash.
+          </p>
+        </label>
+        <div className="flex-1 w-full max-w-xl">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {roleOptions.map((role) => (
+              <label
+                key={role.key}
+                className={`flex items-center gap-3 border border-gray-300 px-4 py-3 ${
+                  user?.role !== "company_owner" ? "bg-gray-100" : "bg-white"
+                }`}
+              >
+                <input
+                  type="checkbox"
+                  checked={permanentDeleteRolesDraft.includes(role.key)}
+                  onChange={() => togglePermanentDeleteRole(role.key)}
+                  disabled={user?.role !== "company_owner" || deletePolicySaving}
+                  className="h-4 w-4 text-indigo-600 border-gray-300"
+                />
+                <span className="text-sm font-medium text-gray-700">{role.label}</span>
+              </label>
+            ))}
+          </div>
+          <RoleWrapper allowedRoles={["company_owner"]} userRole={user?.role || "agent"}>
+            <div className="flex justify-end mt-3">
+              <button
+                onClick={saveDeletePolicy}
+                disabled={
+                  deletePolicySaving ||
+                  permanentDeleteRolesDraft.length === 0 ||
+                  !ownerRoles.some((role) => permanentDeleteRolesDraft.includes(role)) ||
+                  JSON.stringify([...permanentDeleteRolesDraft].sort()) === JSON.stringify([...permanentDeleteRoles].sort())
+                }
+                className="flex items-center text-white text-sm font-medium px-3 py-1 bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-300 disabled:cursor-not-allowed focus:outline-none"
+                type="button"
+              >
+                <CheckIcon className="w-4 h-4 mr-1" />
+                {deletePolicySaving ? "Saving" : "Save Permissions"}
+              </button>
             </div>
           </RoleWrapper>
         </div>

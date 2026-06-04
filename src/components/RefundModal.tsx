@@ -5,16 +5,18 @@ import axios from "axios";
 
 interface RefundModalProps {
   order: OrderInfo | null;
+  messageId?: string;
   onClose: () => void;
 }
 
-const RefundModal: React.FC<RefundModalProps> = ({ order, onClose }) => {
+const RefundModal: React.FC<RefundModalProps> = ({ order, messageId, onClose }) => {
   const { notify } = useNotification();
 
   const items = order?.shopify_order?.line_items || [];
   const shippingPrice = Number(order?.shopify_order?.total_shipping_price || 0);
 
   const [selectedItems, setSelectedItems] = useState<ShopifyLineItem[]>([]);
+  const [refundQuantities, setRefundQuantities] = useState<Record<string, number>>({});
   const [refundAmount, setRefundAmount] = useState("");
   const [refundShipping, setRefundShipping] = useState("");
   const [refundNote, setRefundNote] = useState("");
@@ -28,10 +30,11 @@ const RefundModal: React.FC<RefundModalProps> = ({ order, onClose }) => {
   // ------------------------------------------------
   useEffect(() => {
     const total = selectedItems.reduce((sum, item) => {
-      return sum + Number(item.price) * Number(item.quantity || 1);
+      const key = String(item.id);
+      return sum + Number(item.price) * Number(refundQuantities[key] || 1);
     }, 0);
     setMaxItemRefund(total);
-  }, [selectedItems]);
+  }, [selectedItems, refundQuantities]);
 
   useEffect(() => {
     setSelectAll(selectedItems.length === items.length && items.length > 0);
@@ -40,8 +43,12 @@ const RefundModal: React.FC<RefundModalProps> = ({ order, onClose }) => {
   const toggleSelectAll = () => {
     if (selectAll) {
       setSelectedItems([]);
+      setRefundQuantities({});
     } else {
       setSelectedItems(items);
+      setRefundQuantities(
+        Object.fromEntries(items.map((item) => [String(item.id), Number(item.quantity || 1)]))
+      );
     }
     setSelectAll(!selectAll);
   };
@@ -50,9 +57,27 @@ const RefundModal: React.FC<RefundModalProps> = ({ order, onClose }) => {
     const exists = selectedItems.find((i) => i.id === item.id);
     if (exists) {
       setSelectedItems(selectedItems.filter((i) => i.id !== item.id));
+      setRefundQuantities((prev) => {
+        const next = { ...prev };
+        delete next[String(item.id)];
+        return next;
+      });
     } else {
       setSelectedItems([...selectedItems, item]);
+      setRefundQuantities((prev) => ({
+        ...prev,
+        [String(item.id)]: 1,
+      }));
     }
+  };
+
+  const updateRefundQuantity = (item: ShopifyLineItem, quantity: number) => {
+    const maxQuantity = Number(item.quantity || 1);
+    const clamped = Math.max(1, Math.min(maxQuantity, quantity || 1));
+    setRefundQuantities((prev) => ({
+      ...prev,
+      [String(item.id)]: clamped,
+    }));
   };
 
   // ------------------------------------------------
@@ -87,15 +112,20 @@ const RefundModal: React.FC<RefundModalProps> = ({ order, onClose }) => {
   // Refund Handler
   // ------------------------------------------------
   const handleRefund = async () => {
+    if (!refundNote.trim()) {
+      notify("error", "Refund note is required.");
+      return;
+    }
+
     try {
-      await axios.post(
+      const response = await axios.post(
         `${import.meta.env.VITE_API_URL}/shopify/order/refund`,
         {
           order_id: order?.shopify_order?.order_id,
           shop: order?.shopify_order?.shop,
           selected_items: selectedItems.map((i) => ({
             line_item_id: i.id,
-            quantity: i.quantity,
+            quantity: refundQuantities[String(i.id)] || 1,
           })),
 
           // Allow item refund OR shipping refund OR both
@@ -108,6 +138,7 @@ const RefundModal: React.FC<RefundModalProps> = ({ order, onClose }) => {
             : null,
 
           note: refundNote,
+          message_id: messageId,
         },
         {
           headers: {
@@ -116,7 +147,7 @@ const RefundModal: React.FC<RefundModalProps> = ({ order, onClose }) => {
         }
       );
 
-      notify("success", "Refund processed successfully!");
+      notify("success", response.data?.msg || "Refund processed successfully!");
       onClose();
     } catch (err) {
       console.error(err);
@@ -128,7 +159,7 @@ const RefundModal: React.FC<RefundModalProps> = ({ order, onClose }) => {
   // Disable submit ONLY if both are empty
   // --------------------------------------
   const isRefundDisabled =
-    selectedItems.length === 0 && !includeShipping;
+    (selectedItems.length === 0 && !includeShipping) || !refundNote.trim();
 
   return (
     <div className="fixed inset-0 bg-black/40 flex justify-center items-center z-100">
@@ -162,15 +193,18 @@ const RefundModal: React.FC<RefundModalProps> = ({ order, onClose }) => {
           </label>
 
           <div className="max-h-48 overflow-y-auto space-y-2 mt-2">
-            {items.map((item, idx) => (
+            {items.map((item, idx) => {
+              const selected = selectedItems.some((i) => i.id === item.id);
+              const key = String(item.id);
+              return (
               <label
                 key={idx}
-                className="flex justify-between items-center border-b border-gray-200 pb-2 cursor-pointer"
+                className="flex justify-between items-center gap-3 border-b border-gray-200 pb-2 cursor-pointer"
               >
                 <div className="flex items-center space-x-2">
                   <input
                     type="checkbox"
-                    checked={selectedItems.some((i) => i.id === item.id)}
+                    checked={selected}
                     onChange={() => handleItemToggle(item)}
                     className="w-4 h-4 accent-green-600"
                   />
@@ -178,11 +212,22 @@ const RefundModal: React.FC<RefundModalProps> = ({ order, onClose }) => {
                     {item.name} (x{item.quantity})
                   </span>
                 </div>
+                {selected && (
+                  <input
+                    type="number"
+                    min={1}
+                    max={Number(item.quantity || 1)}
+                    value={refundQuantities[key] || 1}
+                    onChange={(e) => updateRefundQuantity(item, Number(e.target.value))}
+                    className="w-20 border border-gray-300 px-2 py-1 text-sm"
+                    aria-label={`Refund quantity for ${item.name}`}
+                  />
+                )}
                 <span className="text-gray-600">
                   ${Number(item.price).toFixed(2)}
                 </span>
               </label>
-            ))}
+            )})}
           </div>
         </div>
 
@@ -234,7 +279,7 @@ const RefundModal: React.FC<RefundModalProps> = ({ order, onClose }) => {
           {/* Notes */}
           <div>
             <label className="block text-sm font-medium mb-1">
-              Refund Note
+              Refund Note *
             </label>
             <textarea
               value={refundNote}
