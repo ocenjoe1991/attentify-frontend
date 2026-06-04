@@ -13,6 +13,7 @@ type JwtPayload = {
   role: string,
   status: string,
   companies: any,
+  redirect_url?: string,
 };
 
 const OAuthCallbackLogin = () => {
@@ -45,25 +46,9 @@ const OAuthCallbackLogin = () => {
         setCurrentCompanyId(user.company_id); // default company from login
       }
 
-      let redirectPath = "/dashboard";
-      switch (user.role) {
-        case "admin":
-          redirectPath = "/admin/dashboard";
-          break;
-        case "company_owner":
-          redirectPath = "/dashboard";
-          break;
-        case "store_owner":
-          redirectPath = "/dashboard";
-          break;
-        case "agent":
-          redirectPath = "/dashboard";
-          break;
-        case "readonly":
-          redirectPath = "/dashboard";
-          break;
-        default:
-          redirectPath = "/dashboard";
+      let redirectPath = decoded.redirect_url || "/dashboard";
+      if (!decoded.redirect_url && user.role === "admin") {
+        redirectPath = "/admin/dashboard";
       }
 
       setTimeout(() => navigate(redirectPath), 1000); // redirect after short delay
