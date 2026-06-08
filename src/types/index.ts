@@ -95,8 +95,19 @@ export interface ShopifyOrder {
   payment_status?: string;
   fulfillment_status?: string;
   line_items?: ShopifyLineItem[];
+  order_actions?: OrderAction[];
   updated_at?: string;
   [key: string]: any; // For any additional properties
+}
+
+export interface OrderAction {
+  type: "refund" | "cancellation" | string;
+  amount?: number | string;
+  actor_name?: string;
+  actor_role?: string;
+  note?: string;
+  created_at?: string;
+  details?: Record<string, any>;
 }
 
 export interface Comment {

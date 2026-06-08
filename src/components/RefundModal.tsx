@@ -7,9 +7,10 @@ interface RefundModalProps {
   order: OrderInfo | null;
   messageId?: string;
   onClose: () => void;
+  onActionCompleted?: () => void;
 }
 
-const RefundModal: React.FC<RefundModalProps> = ({ order, messageId, onClose }) => {
+const RefundModal: React.FC<RefundModalProps> = ({ order, messageId, onClose, onActionCompleted }) => {
   const { notify } = useNotification();
 
   const items = order?.shopify_order?.line_items || [];
@@ -148,6 +149,7 @@ const RefundModal: React.FC<RefundModalProps> = ({ order, messageId, onClose }) 
       );
 
       notify("success", response.data?.msg || "Refund processed successfully!");
+      onActionCompleted?.();
       onClose();
     } catch (err) {
       console.error(err);

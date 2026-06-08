@@ -40,8 +40,10 @@ const MessageDetailPage = () => {
   // Fetch message thread
   useEffect(() => {
     hasFetchedMessage.current = false;
+    hasFetchedOrder.current = false;
     setLoading(true);
     setMessage(null);
+    setOrderInfo(null);
 
     const fetchMessage = async () => {
       if (hasFetchedMessage.current) return;
@@ -136,6 +138,27 @@ const MessageDetailPage = () => {
       fetchOrderOptions();
     }
   }, [message, currentCompanyId]);
+
+  const reloadOrderInfo = async () => {
+    if (!message?._id) return;
+
+    try {
+      setLoadingOrder(true);
+      const response = await axios.post(
+        (import.meta.env.VITE_API_URL || "") + "/message/analyze",
+        { message_id: message._id },
+        {
+          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+        }
+      );
+      setOrderInfo(response.data);
+    } catch (err) {
+      console.error("Failed to refresh order info", err);
+      notify("error", "Failed to refresh order info");
+    } finally {
+      setLoadingOrder(false);
+    }
+  };
 
   return (
     <Layout>
@@ -264,6 +287,7 @@ const MessageDetailPage = () => {
                   })();
                 }}
                 showConfirmButton={!message?.order_info?.confirmed || message.order_info.order_id !== orderInfo?.order_id}
+                onActionCompleted={reloadOrderInfo}
                 onConfirm={async () => {
                   try {
                     await axios.put(`${import.meta.env.VITE_API_URL || ""}/message/${message?._id}`, {
