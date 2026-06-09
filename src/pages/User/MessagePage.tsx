@@ -40,10 +40,12 @@ interface Message {
   last_updated: string;
   messages: ChatEntry[];
   assigned_to?: Member | null;
+  order_match_status?: "matched" | "possible" | "unmatched" | "not_order" | "unknown";
 }
 
 type ViewMode = "inbox" | "archived" | "trashed";
 type AssignedFilter = "all" | "assigned" | "unassigned";
+type OrderFilter = "all" | "order" | "other" | "needs_review";
 type SortBy = "started_at" | "last_updated";
 type SortOrder = "asc" | "desc";
 
@@ -97,6 +99,7 @@ const defaultMessagePreferences = {
   currentPage: 1,
   pageSize: 10,
   assignedFilter: "all" as AssignedFilter,
+  orderFilter: "all" as OrderFilter,
   statusFilter: "all",
   sortBy: "last_updated" as SortBy,
   sortOrder: "desc" as SortOrder,
@@ -104,6 +107,35 @@ const defaultMessagePreferences = {
 
 const ownerRoles = ["company_owner", "store_owner"];
 const permanentDeletePermission = "permanent_delete_ticket";
+
+const orderStatusLabel = (status?: string) => {
+  switch (status) {
+    case "matched":
+      return "Order";
+    case "possible":
+      return "Review";
+    case "unmatched":
+      return "No match";
+    case "not_order":
+      return "Other";
+    default:
+      return "Unreviewed";
+  }
+};
+
+const orderStatusClass = (status?: string) => {
+  switch (status) {
+    case "matched":
+      return "bg-green-100 text-green-700";
+    case "possible":
+      return "bg-orange-100 text-orange-700";
+    case "unmatched":
+    case "not_order":
+      return "bg-gray-100 text-gray-600";
+    default:
+      return "bg-blue-50 text-blue-700";
+  }
+};
 
 function loadMessagePreferences() {
   try {
@@ -142,6 +174,7 @@ export default function MessagePage() {
   const [currentPage, setCurrentPage] = useState<number>(savedPreferences.currentPage);
   const [pageSize, setPageSize] = useState(savedPreferences.pageSize);
   const [assignedFilter, setAssignedFilter] = useState<AssignedFilter>(savedPreferences.assignedFilter);
+  const [orderFilter, setOrderFilter] = useState<OrderFilter>(savedPreferences.orderFilter);
   const [statusFilter, setStatusFilter] = useState<string>(savedPreferences.statusFilter);
   const [sortBy, setSortBy] = useState<SortBy>(savedPreferences.sortBy);
   const [sortOrder, setSortOrder] = useState<SortOrder>(savedPreferences.sortOrder);
@@ -230,12 +263,13 @@ export default function MessagePage() {
         currentPage,
         pageSize,
         assignedFilter,
+        orderFilter,
         statusFilter,
         sortBy,
         sortOrder,
       })
     );
-  }, [viewMode, currentPage, pageSize, assignedFilter, statusFilter, sortBy, sortOrder]);
+  }, [viewMode, currentPage, pageSize, assignedFilter, orderFilter, statusFilter, sortBy, sortOrder]);
 
   const fetchMessages = async () => {
     if (!currentCompanyId) return;
@@ -252,6 +286,7 @@ export default function MessagePage() {
             size: pageSize,
             view_mode: viewMode,
             assigned_filter: assignedFilter,
+            order_filter: orderFilter,
             status_filter: effectiveStatusFilter,
             sort_by: sortBy,
             sort_order: sortOrder,
@@ -272,7 +307,7 @@ export default function MessagePage() {
 
   useEffect(() => {
     fetchMessages();
-  }, [currentCompanyId, currentPage, pageSize, search, viewMode, assignedFilter, effectiveStatusFilter, sortBy, sortOrder]);
+  }, [currentCompanyId, currentPage, pageSize, search, viewMode, assignedFilter, orderFilter, effectiveStatusFilter, sortBy, sortOrder]);
 
   useEffect(() => {
     if (statusFilter !== "all" && !statusFilterOptions.includes(statusFilter)) {
@@ -283,7 +318,7 @@ export default function MessagePage() {
 
   useEffect(() => {
     setSelected([]);
-  }, [viewMode, search, assignedFilter, statusFilter, sortBy, sortOrder]);
+  }, [viewMode, search, assignedFilter, orderFilter, statusFilter, sortBy, sortOrder]);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -605,6 +640,23 @@ export default function MessagePage() {
           </label>
 
           <label className="flex flex-col gap-1 text-xs font-medium text-gray-600">
+            Order match
+            <select
+              value={orderFilter}
+              onChange={(e) => {
+                setOrderFilter(e.target.value as OrderFilter);
+                setCurrentPage(1);
+              }}
+              className="border border-gray-300 px-3 py-2 text-sm font-normal text-gray-700"
+            >
+              <option value="all">All messages</option>
+              <option value="order">Order-related</option>
+              <option value="other">Other</option>
+              <option value="needs_review">Needs review</option>
+            </select>
+          </label>
+
+          <label className="flex flex-col gap-1 text-xs font-medium text-gray-600">
             Status
             <select
               value={statusFilter}
@@ -643,6 +695,7 @@ export default function MessagePage() {
                 <th className="px-6 py-3 w-2/10 text-left">Client</th>
                 <th className="px-6 py-3 w-4/10 text-left">Title</th>
                 <th className="px-6 py-3 w-2/10 text-left">Ticket</th>
+                <th className="px-6 py-3 w-1/10 text-left">Order</th>
                 <th className="px-6 py-3 w-1/10 text-left">Assigned</th>
                 <th className="px-6 py-3 w-1/10 text-left">Status</th>
                 <th className="px-6 py-3 w-2/10 text-center">
@@ -653,7 +706,7 @@ export default function MessagePage() {
             <tbody>
               {filteredMessages.length === 0 ? (
                 <tr>
-                  <td className="p-8 text-gray-400 text-center" colSpan={7}>
+                  <td className="p-8 text-gray-400 text-center" colSpan={8}>
                     No {viewLabel.toLowerCase()} emails found.
                   </td>
                 </tr>
@@ -682,6 +735,11 @@ export default function MessagePage() {
                     </td>
                     <td className="px-6 py-4 w-2/10 text-blue-700 hover:underline">
                       {msg.ticket?? ""}
+                    </td>
+                    <td className="px-6 py-4 w-1/10">
+                      <span className={`inline-block px-2 py-1 text-xs font-semibold rounded ${orderStatusClass(msg.order_match_status)}`}>
+                        {orderStatusLabel(msg.order_match_status)}
+                      </span>
                     </td>
                     {/* Assigned */}
                     <td className="px-6 py-4 w-1/10">
