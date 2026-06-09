@@ -23,10 +23,7 @@ const buildOrderOptions = (orders: any[], mentionedOrderName?: string) => {
   orders.forEach((item) => {
     const option = {
       value: item.name,
-      label:
-        normalizedMentioned && item.name === normalizedMentioned
-          ? `${item.name} - mentioned in message`
-          : item.name,
+      label: item.name,
     };
 
     if (normalizedMentioned && item.name === normalizedMentioned) {

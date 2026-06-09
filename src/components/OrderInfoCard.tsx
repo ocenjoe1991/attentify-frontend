@@ -440,17 +440,20 @@ const OrderInfoCard: React.FC<OrderInfoCardProps> = ({
               return (
                 <>
                   {/* FLEX ROWS */}
-                  <div className="flex justify-between mb-2">
-                    <span className="font-semibold">ID:</span>
+                  <div className="grid grid-cols-[44px_1fr] items-start gap-2 mb-2">
+                    <span className="font-semibold pt-2">ID:</span>
                     {/* <span>{order.shopify_order.name || "-"}</span> */}
-                    <div className="flex flex-wrap justify-end gap-1">
+                    <div className="flex flex-wrap items-start justify-end gap-1">
                       <Select
                         components={{
                           IndicatorSeparator: null,
                           LoadingIndicator: () => null,
                         }}
                         classNames={{
-                          control: () => "w-[110px] border border-gray-300 !rounded-none text-sm",
+                          control: () => "w-[150px] min-h-[38px] border border-gray-300 !rounded-none text-sm",
+                          menu: () => "w-[150px] text-sm",
+                          option: () => "text-sm",
+                          groupHeading: () => "text-[11px] font-semibold text-gray-500",
                           dropdownIndicator: () => "!p-0 !text-black",
                         }}
                         options={orderOptions}
