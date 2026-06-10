@@ -87,6 +87,44 @@ const formatActionDate = (value?: string) => {
   });
 };
 
+const renderActionItems = (action: OrderAction) => {
+  const details = action.details || {};
+  const lineItems = details.line_items || [];
+  const returnedItems = details.returned_items || [];
+  const exchangeItems = details.exchange_items || [];
+  const hasReturnedItems = returnedItems.length > 0 && action.type === "exchange";
+
+  const renderItems = (label: string, items: any[]) => {
+    if (!items.length) return null;
+    return (
+      <div className="mt-2">
+        <div className="text-xs font-semibold text-gray-600">{label}</div>
+        <ul className="mt-1 space-y-1">
+          {items.map((item, index) => (
+            <li key={`${label}-${item.line_item_id || item.variant_id || index}`} className="flex justify-between gap-3 text-xs text-gray-700">
+              <span className="min-w-0 break-words">
+                {item.name || "Unknown item"} x {item.quantity || 1}
+              </span>
+              {item.amount !== undefined && item.amount !== "" && (
+                <span className="shrink-0">{formatMoney(item.amount)}</span>
+              )}
+            </li>
+          ))}
+        </ul>
+      </div>
+    );
+  };
+
+  return (
+    <>
+      {hasReturnedItems
+        ? renderItems("Returned item", returnedItems)
+        : renderItems("Item", lineItems)}
+      {renderItems("Replacement item", exchangeItems)}
+    </>
+  );
+};
+
 const renderOrderActions = (actions?: OrderAction[]) => {
   if (!actions || actions.length === 0) {
     return <div className="text-sm text-gray-500">No order actions yet.</div>;
@@ -107,6 +145,7 @@ const renderOrderActions = (actions?: OrderAction[]) => {
           {action.note && !action.details?.source && (
             <div className="mt-1 text-gray-700 break-words">{action.note}</div>
           )}
+          {renderActionItems(action)}
         </div>
       ))}
     </div>
