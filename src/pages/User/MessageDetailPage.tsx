@@ -207,8 +207,8 @@ const MessageDetailPage = () => {
     <Layout>
       {loading && <div className="p-4">Loading...</div>}
       {!loading && (
-        <div className="p-4">
-          <div className="mb-4">
+        <div className="flex h-[calc(100vh-5rem)] flex-col overflow-hidden p-4">
+          <div className="mb-4 shrink-0">
             <Link
               to="/message"
               className="inline-flex items-center gap-2 border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
@@ -218,12 +218,12 @@ const MessageDetailPage = () => {
             </Link>
           </div>
 
-          <div className="flex min-h-screen w-full">
+          <div className="flex min-h-0 w-full flex-1 gap-6 overflow-hidden">
           {/* Main Email Thread */}
-          <div className="flex-1 max-w-4xl">
+          <div className="min-w-0 flex-1 overflow-y-auto pr-2">
             
             {message ? (
-              <div className="space-y-2 mt-4">
+              <div className="mx-auto max-w-5xl space-y-2">
                 {message.messages.map((entry, index) => {
                   const isLast = index === message.messages.length - 1;
 
@@ -288,8 +288,8 @@ const MessageDetailPage = () => {
           </div>
 
           {/* Sidebar */}
-          <div className="flex flex-col justify-start ml-6 space-y-6">
-            <div className="sticky top-24 flex flex-col space-y-6">
+          <div className="w-[404px] shrink-0 overflow-y-auto pr-1">
+            <div className="flex flex-col space-y-6">
               <OrderInfoCard
                 order={orderInfo}
                 loading={loadingOrder}
