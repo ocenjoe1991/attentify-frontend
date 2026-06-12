@@ -264,7 +264,9 @@ export default function OrderPage() {
 
           {/* Table */}
           {loading && hasLoadedOrders && (
-            <div className="mb-2 text-sm text-gray-500">Loading orders...</div>
+            <div className="fixed right-6 top-20 z-40 border border-gray-300 bg-white px-4 py-2 text-sm text-gray-600 shadow">
+              Loading orders...
+            </div>
           )}
 
           {loading && !hasLoadedOrders ? (
