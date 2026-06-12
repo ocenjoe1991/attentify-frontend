@@ -66,6 +66,7 @@ export default function OrderPage() {
   const savedPreferences = loadOrderPreferences();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(false);
+  const [hasLoadedOrders, setHasLoadedOrders] = useState(false);
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [selectedShop, setSelectedShop] = useState(savedPreferences.selectedShop);
@@ -138,6 +139,7 @@ export default function OrderPage() {
       console.error("Failed to fetch orders", err);
       notify("error", "Failed to fetch orders");
     } finally {
+      setHasLoadedOrders(true);
       setLoading(false);
     }
   };
@@ -261,7 +263,11 @@ export default function OrderPage() {
           </div>
 
           {/* Table */}
-          {loading ? (
+          {loading && hasLoadedOrders && (
+            <div className="mb-2 text-sm text-gray-500">Loading orders...</div>
+          )}
+
+          {loading && !hasLoadedOrders ? (
             <p className="text-gray-500">Loading Orders...</p>
           ) : orders.length === 0 ? (
             <p className="text-gray-500">No Orders.</p>
