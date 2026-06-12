@@ -13,6 +13,8 @@ interface OrderInfoCardProps {
   messageId?: string;
   orderOptions: any;
   mentionedOrderName?: string;
+  readOnlyOrderSelection?: boolean;
+  layout?: "sidebar" | "detail";
   onOrderNameChanged: (orderName: string) => void;
   showConfirmButton: boolean,
   isOrderConfirmed?: boolean;
@@ -92,6 +94,7 @@ const renderActionItems = (action: OrderAction) => {
   const lineItems = details.line_items || [];
   const returnedItems = details.returned_items || [];
   const exchangeItems = details.exchange_items || [];
+  const shippingRefund = details.shipping_refund;
   const hasReturnedItems = returnedItems.length > 0 && action.type === "exchange";
 
   const renderItems = (label: string, items: any[]) => {
@@ -120,6 +123,15 @@ const renderActionItems = (action: OrderAction) => {
       {hasReturnedItems
         ? renderItems("Returned item", returnedItems)
         : renderItems("Item", lineItems)}
+      {shippingRefund?.amount !== undefined && shippingRefund?.amount !== "" && (
+        <div className="mt-2">
+          <div className="text-xs font-semibold text-gray-600">Shipping</div>
+          <div className="mt-1 flex justify-between gap-3 text-xs text-gray-700">
+            <span>{shippingRefund.name || "Shipping refund"}</span>
+            <span className="shrink-0">{formatMoney(shippingRefund.amount)}</span>
+          </div>
+        </div>
+      )}
       {renderItems("Replacement item", exchangeItems)}
     </>
   );
@@ -193,6 +205,8 @@ const OrderInfoCard: React.FC<OrderInfoCardProps> = ({
   messageId,
   orderOptions, 
   mentionedOrderName,
+  readOnlyOrderSelection = false,
+  layout = "sidebar",
   onOrderNameChanged, 
   showConfirmButton, 
   isOrderConfirmed = false,
@@ -233,6 +247,9 @@ const OrderInfoCard: React.FC<OrderInfoCardProps> = ({
   const isDifferentFromMentioned = Boolean(
     mentionedOrderName && selectedOrderName && mentionedOrderName !== selectedOrderName
   );
+  const cardClassName = layout === "detail"
+    ? "w-full border border-gray-300 bg-white p-5"
+    : "w-[380px] border border-gray-300 bg-white p-4";
 
   const postOrderAction = async (path: string, payload: Record<string, unknown>, fallbackMessage: string) => {
     if (!hasActionableOrder) {
@@ -422,7 +439,7 @@ const OrderInfoCard: React.FC<OrderInfoCardProps> = ({
 
   return (
     <>
-    <div className="w-[380px] border border-gray-300 bg-white p-4">
+    <div className={cardClassName}>
         <h2 className="text-lg font-bold mb-5">Customer</h2>
         {order &&
           order.shopify_order &&
@@ -453,7 +470,7 @@ const OrderInfoCard: React.FC<OrderInfoCardProps> = ({
         )}
       </div>
 
-      <div className="w-[380px] bg-white border border-gray-300 p-4">
+      <div className={cardClassName}>
         <h3 className="text-lg font-semibold mb-4">Order</h3>
 
         {order.shopify_order ? (
@@ -485,29 +502,35 @@ const OrderInfoCard: React.FC<OrderInfoCardProps> = ({
                     <span className="font-semibold pt-2">ID:</span>
                     {/* <span>{order.shopify_order.name || "-"}</span> */}
                     <div className="flex flex-wrap items-start justify-end gap-1">
-                      <Select
-                        components={{
-                          IndicatorSeparator: null,
-                          LoadingIndicator: () => null,
-                        }}
-                        classNames={{
-                          control: () => "w-[150px] min-h-[38px] border border-gray-300 !rounded-none text-sm",
-                          menu: () => "w-[150px] text-sm",
-                          option: () => "text-sm",
-                          groupHeading: () => "text-[11px] font-semibold text-gray-500",
-                          dropdownIndicator: () => "!p-0 !text-black",
-                        }}
-                        options={orderOptions}
-                        value={{
-                          value: order.shopify_order.name,
-                          label: order.shopify_order.name,
-                        }}
-                        onChange={(newValue) => {
-                          if (newValue?.value) {
-                            onOrderNameChanged(newValue.value);
-                          }
-                        }}
-                      />
+                      {readOnlyOrderSelection ? (
+                        <span className="min-h-[38px] min-w-[150px] border border-gray-300 bg-gray-50 px-3 py-2 text-sm text-gray-900">
+                          {order.shopify_order.name || order.order_id || "-"}
+                        </span>
+                      ) : (
+                        <Select
+                          components={{
+                            IndicatorSeparator: null,
+                            LoadingIndicator: () => null,
+                          }}
+                          classNames={{
+                            control: () => "w-[150px] min-h-[38px] border border-gray-300 !rounded-none text-sm",
+                            menu: () => "w-[150px] text-sm",
+                            option: () => "text-sm",
+                            groupHeading: () => "text-[11px] font-semibold text-gray-500",
+                            dropdownIndicator: () => "!p-0 !text-black",
+                          }}
+                          options={orderOptions}
+                          value={{
+                            value: order.shopify_order.name,
+                            label: order.shopify_order.name,
+                          }}
+                          onChange={(newValue) => {
+                            if (newValue?.value) {
+                              onOrderNameChanged(newValue.value);
+                            }
+                          }}
+                        />
+                      )}
                       {showConfirmButton && <button 
                         className="px-3 py-1.5 bg-blue-600 text-white text-sm hover:bg-blue-700 transition"
                         onClick={onConfirm}

@@ -86,12 +86,14 @@ export default function OrderDetailPage() {
         </div>
 
         <div className="min-h-0 flex-1 overflow-y-auto">
-          <div className="max-w-[440px]">
+          <div className="grid max-w-6xl grid-cols-1 gap-6 xl:grid-cols-[420px_1fr]">
             <OrderInfoCard
               order={orderInfo}
               loading={loading}
               error={error}
               orderOptions={orderOptions}
+              readOnlyOrderSelection
+              layout="detail"
               onOrderNameChanged={() => {}}
               showConfirmButton={false}
               isOrderConfirmed={false}
