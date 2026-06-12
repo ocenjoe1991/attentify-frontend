@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import axios from "axios";
 import Layout from "../../layouts/Layout";
@@ -67,6 +67,7 @@ export default function OrderPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [selectedShop, setSelectedShop] = useState(savedPreferences.selectedShop);
   const [shops, setShops] = useState<ShopifyShop[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
@@ -82,9 +83,23 @@ export default function OrderPage() {
 
   useEffect(() => {
     setTitle("Orders");
+  }, [setTitle]);
+
+  useEffect(() => {
+    const timeout = window.setTimeout(() => {
+      setDebouncedSearch(search.trim());
+    }, 350);
+
+    return () => window.clearTimeout(timeout);
+  }, [search]);
+
+  useEffect(() => {
     fetchOrders();
+  }, [currentPage, pageSize, debouncedSearch, selectedShop, sortBy, sortOrder, currentCompanyId]);
+
+  useEffect(() => {
     fetchShops();
-  }, [currentPage, pageSize, search, selectedShop, sortBy, sortOrder, currentCompanyId]);
+  }, [currentCompanyId]);
 
   useEffect(() => {
     localStorage.setItem(
@@ -106,7 +121,7 @@ export default function OrderPage() {
     try {
       const res = await axios.get(`${import.meta.env.VITE_API_URL || ""}/shopify/orders`, {
         params: {
-          search,
+          search: debouncedSearch,
           page: currentPage,
           size: pageSize,
           shop: selectedShop,
@@ -130,7 +145,6 @@ export default function OrderPage() {
   const fetchShops = async () => {
     if (!currentCompanyId) return;
 
-    setLoading(true);
     try {
       // Build base URL
       const baseUrl = import.meta.env.VITE_API_URL || "";
@@ -146,8 +160,6 @@ export default function OrderPage() {
     } catch (err) {
       console.error("Failed to fetch Shopify shops", err);
       notify("error", "Failed to fetch Shopify shops");
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -183,7 +195,7 @@ export default function OrderPage() {
 
   const sortIndicator = (field: SortField) => {
     if (sortBy !== field) return "";
-    return sortOrder === "asc" ? " ↑" : " ↓";
+    return sortOrder === "asc" ? " ^" : " v";
   };
 
   const SortHeader = ({

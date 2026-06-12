@@ -31,6 +31,7 @@ export default function OrderDetailPage() {
           size: 1,
           shop: "",
           company_id: currentCompanyId,
+          include_actions: true,
         },
         headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
       });
