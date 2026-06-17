@@ -10,6 +10,7 @@ import {
   LinkIcon,
   ShieldCheckIcon,
   ShoppingBagIcon,
+  XMarkIcon,
 } from "@heroicons/react/24/outline";
 import Layout from "../../layouts/Layout";
 import { usePageTitle } from "../../context/PageTitleContext";
@@ -169,6 +170,10 @@ export default function Dashboard() {
   const { notify } = useNotification();
   const [dashboard, setDashboard] = useState<DashboardData>(emptyDashboard);
   const [loading, setLoading] = useState(false);
+  const [selectedApproval, setSelectedApproval] = useState<DashboardApproval | null>(null);
+  const [isApprovalModalOpen, setIsApprovalModalOpen] = useState(false);
+  const [rejectionReasonModal, setRejectionReasonModal] = useState("");
+  const [approvalProcessing, setApprovalProcessing] = useState(false);
 
   const fetchDashboard = async () => {
     if (!currentCompanyId) return;
@@ -212,7 +217,7 @@ export default function Dashboard() {
     {
       label: "Approvals waiting",
       value: dashboard.summary.awaiting_approval,
-      to: "/settings",
+      to: "/settings?tab=approvals",
     },
   ];
 
@@ -333,7 +338,7 @@ export default function Dashboard() {
             <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
               <Section
                 title="My Pending Approvals"
-                action={<Link to="/settings" className="text-sm text-blue-600 hover:text-blue-700">Review</Link>}
+                action={<button type="button" onClick={() => setSelectedApproval(null)} className="text-sm text-blue-600 hover:text-blue-700">View all</button>}
               >
                 {dashboard.my_pending_approvals.length === 0 ? (
                   <div className="flex items-center gap-2 text-sm text-gray-500">
@@ -343,7 +348,16 @@ export default function Dashboard() {
                 ) : (
                   <div className="space-y-2">
                     {dashboard.my_pending_approvals.map((approval) => (
-                      <div key={approval._id} className="border border-gray-200 px-3 py-2">
+                      <button
+                        key={approval._id}
+                        type="button"
+                        onClick={() => {
+                          setSelectedApproval(approval);
+                          setRejectionReasonModal("");
+                          setIsApprovalModalOpen(true);
+                        }}
+                        className="w-full border border-gray-200 px-3 py-2 text-left hover:bg-gray-50"
+                      >
                         <div className="flex items-center justify-between gap-3">
                           <span className="text-sm font-medium text-gray-900">{approvalLabel(approval.type)}</span>
                           <span className="text-xs text-gray-500">{formatLocalDate(approval.created_at)}</span>
@@ -351,7 +365,7 @@ export default function Dashboard() {
                         <div className="mt-1 text-xs text-gray-500">
                           {approval.requester_name || approval.requester_email || "Unknown requester"}
                         </div>
-                      </div>
+                      </button>
                     ))}
                   </div>
                 )}
@@ -359,7 +373,7 @@ export default function Dashboard() {
 
               <Section
                 title="Team Pending Approvals"
-                action={<Link to="/settings" className="text-sm text-blue-600 hover:text-blue-700">Review</Link>}
+                action={<Link to="/settings?tab=approvals" className="text-sm text-blue-600 hover:text-blue-700">Review all</Link>}
               >
                 {dashboard.team_pending_approvals.length === 0 ? (
                   <div className="flex items-center gap-2 text-sm text-gray-500">
@@ -382,7 +396,10 @@ export default function Dashboard() {
                   </div>
                 )}
               </Section>
+            </div>
 
+            {/* Messages + Activity side-by-side */}
+            <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
               <Section
                 title="Recent Messages"
                 action={<Link to="/message" className="text-sm text-blue-600 hover:text-blue-700">Open inbox</Link>}
@@ -408,29 +425,145 @@ export default function Dashboard() {
                   </div>
                 )}
               </Section>
+
+              <Section
+                title="Recent Activity"
+                action={<Link to="/settings/audit-log" className="text-sm text-blue-600 hover:text-blue-700">View audit log</Link>}
+              >
+                {dashboard.recent_activity.length === 0 ? (
+                  <div className="text-sm text-gray-500">No activity yet.</div>
+                ) : (
+                  <div className="space-y-2">
+                    {dashboard.recent_activity.map((log) => (
+                      <div key={log._id} className="flex gap-3 border border-gray-200 px-3 py-2">
+                        <ClockIcon className="mt-0.5 h-4 w-4 shrink-0 text-gray-500" />
+                        <div className="min-w-0">
+                          <div className="truncate text-sm text-gray-800">{buildLogText(log)}</div>
+                          <div className="mt-1 text-xs text-gray-500">{formatUtcDate(log.created_at)}</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </Section>
             </div>
 
-            <Section
-              title="Recent Activity"
-              action={<Link to="/settings/audit-log" className="text-sm text-blue-600 hover:text-blue-700">View audit log</Link>}
-            >
-              {dashboard.recent_activity.length === 0 ? (
-                <div className="text-sm text-gray-500">No activity yet.</div>
-              ) : (
-                <div className="space-y-2">
-                  {dashboard.recent_activity.map((log) => (
-                    <div key={log._id} className="flex gap-3 border border-gray-200 px-3 py-2">
-                      <ClockIcon className="mt-0.5 h-4 w-4 shrink-0 text-gray-500" />
-                      <div className="min-w-0">
-                        <div className="truncate text-sm text-gray-800">{buildLogText(log)}</div>
-                        <div className="mt-1 text-xs text-gray-500">{formatUtcDate(log.created_at)}</div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </Section>
+            {/* duplicate Recent Activity removed */}
           </>
+        )}
+
+        {/* Approval Modal */}
+        {isApprovalModalOpen && selectedApproval && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+            <div className="w-full max-w-md border border-gray-300 bg-white p-6">
+              <div className="mb-4 flex items-center justify-between">
+                <h3 className="text-lg font-semibold text-gray-900">Approval Request</h3>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsApprovalModalOpen(false);
+                    setSelectedApproval(null);
+                  }}
+                  className="text-gray-500 hover:text-gray-700"
+                >
+                  <XMarkIcon className="h-5 w-5" />
+                </button>
+              </div>
+
+              <div className="mb-6 space-y-3">
+                <div>
+                  <span className="text-xs font-semibold text-gray-600">TYPE</span>
+                  <p className="mt-1 text-sm font-medium text-gray-900">{approvalLabel(selectedApproval.type)}</p>
+                </div>
+                <div>
+                  <span className="text-xs font-semibold text-gray-600">REQUESTER</span>
+                  <p className="mt-1 text-sm text-gray-900">
+                    {selectedApproval.requester_name && <>{selectedApproval.requester_name}</>}
+                    {selectedApproval.requester_name && selectedApproval.requester_email && <> ({selectedApproval.requester_email})</>}
+                    {!selectedApproval.requester_name && selectedApproval.requester_email && <>{selectedApproval.requester_email}</>}
+                    {!selectedApproval.requester_name && !selectedApproval.requester_email && <>Unknown</>}
+                  </p>
+                </div>
+                <div>
+                  <span className="text-xs font-semibold text-gray-600">REQUESTED AT</span>
+                  <p className="mt-1 text-sm text-gray-900">{formatLocalDate(selectedApproval.created_at)}</p>
+                </div>
+              </div>
+
+              <div className="mb-4">
+                <label className="block text-xs font-semibold text-gray-600">Rejection reason (required to reject)</label>
+                <textarea
+                  value={rejectionReasonModal}
+                  onChange={(e) => setRejectionReasonModal(e.target.value)}
+                  rows={3}
+                  className="mt-1 w-full rounded border border-gray-300 px-3 py-2 text-sm"
+                  placeholder="Explain why this request is rejected"
+                />
+              </div>
+
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={async () => {
+                    if (!selectedApproval) return;
+                    setApprovalProcessing(true);
+                    try {
+                      const resp = await axios.post(
+                        `${import.meta.env.VITE_API_URL || ""}/shopify/approval-requests/${selectedApproval._id}/approve`,
+                        {},
+                        { headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } }
+                      );
+                      notify("success", resp.data?.msg || "Approved");
+                      setIsApprovalModalOpen(false);
+                      setSelectedApproval(null);
+                      await fetchDashboard();
+                    } catch (err: any) {
+                      console.error("Approve failed", err);
+                      notify("error", err?.response?.data?.detail || "Failed to approve");
+                    } finally {
+                      setApprovalProcessing(false);
+                    }
+                  }}
+                  className="flex-1 border border-green-600 bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700"
+                  disabled={approvalProcessing}
+                >
+                  Approve
+                </button>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    if (!selectedApproval) return;
+                    if (!rejectionReasonModal || !rejectionReasonModal.trim()) {
+                      notify("error", "Please provide a rejection reason.");
+                      return;
+                    }
+                    setApprovalProcessing(true);
+                    try {
+                      const resp = await axios.post(
+                        `${import.meta.env.VITE_API_URL || ""}/shopify/approval-requests/${selectedApproval._id}/reject`,
+                        { reason: rejectionReasonModal },
+                        { headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } }
+                      );
+                      notify("success", resp.data?.msg || "Rejected");
+                      setIsApprovalModalOpen(false);
+                      setSelectedApproval(null);
+                      setRejectionReasonModal("");
+                      await fetchDashboard();
+                    } catch (err: any) {
+                      console.error("Reject failed", err);
+                      notify("error", err?.response?.data?.detail || "Failed to reject");
+                    } finally {
+                      setApprovalProcessing(false);
+                    }
+                  }}
+                  className="flex-1 border border-red-600 bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700"
+                  disabled={approvalProcessing}
+                >
+                  Reject
+                </button>
+              </div>
+            </div>
+          </div>
         )}
       </div>
     </Layout>
