@@ -40,6 +40,7 @@ type SortField = "order" | "date" | "payment_status" | "fulfillment_status";
 type SortOrder = "asc" | "desc";
 
 const ORDER_PREFERENCES_KEY = "attentify.orderListPreferences";
+const ORDER_LIST_CACHE_TTL_MS = 5 * 60 * 1000;
 
 const defaultOrderPreferences = {
   pageSize: 10,
@@ -47,6 +48,26 @@ const defaultOrderPreferences = {
   sortBy: "date" as SortField,
   sortOrder: "desc" as SortOrder,
 };
+
+type OrderListRequestParams = {
+  company_id: string;
+  search: string;
+  page: number;
+  size: number;
+  shop: string;
+  sort_by: SortField;
+  sort_order: SortOrder;
+};
+
+type OrderListCache = {
+  params: OrderListRequestParams;
+  orders: Order[];
+  totalPages: number;
+  scrollY: number;
+  storedAt: number;
+};
+
+let orderListCache: OrderListCache | null = null;
 
 function loadOrderPreferences() {
   try {
@@ -64,18 +85,19 @@ function loadOrderPreferences() {
 
 export default function OrderPage() {
   const savedPreferences = loadOrderPreferences();
-  const [orders, setOrders] = useState<Order[]>([]);
+  const cachedParams = orderListCache?.params;
+  const [orders, setOrders] = useState<Order[]>(() => orderListCache?.orders || []);
   const [loading, setLoading] = useState(false);
-  const [hasLoadedOrders, setHasLoadedOrders] = useState(false);
-  const [search, setSearch] = useState("");
-  const [debouncedSearch, setDebouncedSearch] = useState("");
-  const [selectedShop, setSelectedShop] = useState(savedPreferences.selectedShop);
+  const [hasLoadedOrders, setHasLoadedOrders] = useState(Boolean(orderListCache?.orders.length));
+  const [search, setSearch] = useState(cachedParams?.search || "");
+  const [debouncedSearch, setDebouncedSearch] = useState(cachedParams?.search || "");
+  const [selectedShop, setSelectedShop] = useState(cachedParams?.shop || savedPreferences.selectedShop);
   const [shops, setShops] = useState<ShopifyShop[]>([]);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(savedPreferences.pageSize);
-  const [totalPages, setTotalPages] = useState(1);
-  const [sortBy, setSortBy] = useState<SortField>(savedPreferences.sortBy);
-  const [sortOrder, setSortOrder] = useState<SortOrder>(savedPreferences.sortOrder);
+  const [currentPage, setCurrentPage] = useState(cachedParams?.page || 1);
+  const [pageSize, setPageSize] = useState(cachedParams?.size || savedPreferences.pageSize);
+  const [totalPages, setTotalPages] = useState(orderListCache?.totalPages || 1);
+  const [sortBy, setSortBy] = useState<SortField>(cachedParams?.sort_by || savedPreferences.sortBy);
+  const [sortOrder, setSortOrder] = useState<SortOrder>(cachedParams?.sort_order || savedPreferences.sortOrder);
 
   const { notify } = useNotification();
   const { setTitle } = usePageTitle();
@@ -114,27 +136,82 @@ export default function OrderPage() {
     );
   }, [pageSize, selectedShop, sortBy, sortOrder]);
 
+  useEffect(() => {
+    const cachedList = orderListCache;
+    if (!cachedList || Date.now() - cachedList.storedAt >= ORDER_LIST_CACHE_TTL_MS) return;
+
+    const restoreScroll = window.setTimeout(() => {
+      window.scrollTo({ top: cachedList.scrollY, behavior: "auto" });
+    }, 0);
+
+    return () => {
+      window.clearTimeout(restoreScroll);
+    };
+  }, []);
+
+  useEffect(() => {
+    const saveScroll = () => {
+      if (orderListCache) {
+        orderListCache = {
+          ...orderListCache,
+          scrollY: window.scrollY,
+        };
+      }
+    };
+
+    window.addEventListener("scroll", saveScroll, { passive: true });
+    return () => {
+      saveScroll();
+      window.removeEventListener("scroll", saveScroll);
+    };
+  }, []);
+
   // Fetch all orders with search, pagination, and shop filter
-  const fetchOrders = async () => {
+  const fetchOrders = async (options: { force?: boolean } = {}) => {
     if (!currentCompanyId) return;
+
+    const requestParams: OrderListRequestParams = {
+      search: debouncedSearch,
+      page: currentPage,
+      size: pageSize,
+      shop: selectedShop,
+      sort_by: sortBy,
+      sort_order: sortOrder,
+      company_id: currentCompanyId,
+    };
+
+    const cachedList = orderListCache;
+    const cacheMatches =
+      cachedList &&
+      Date.now() - cachedList.storedAt < ORDER_LIST_CACHE_TTL_MS &&
+      JSON.stringify(cachedList.params) === JSON.stringify(requestParams);
+
+    if (!options.force && cacheMatches && cachedList) {
+      setOrders(cachedList.orders);
+      setTotalPages(cachedList.totalPages);
+      setHasLoadedOrders(true);
+      return;
+    }
 
     setLoading(true);
     try {
       const res = await axios.get(`${import.meta.env.VITE_API_URL || ""}/shopify/orders`, {
-        params: {
-          search: debouncedSearch,
-          page: currentPage,
-          size: pageSize,
-          shop: selectedShop,
-          sort_by: sortBy,
-          sort_order: sortOrder,
-          company_id: currentCompanyId, 
-        },
+        params: requestParams,
         headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
       });
 
-      setOrders(res.data.orders);
-      setTotalPages(res.data.totalPages);
+      const nextOrders = res.data.orders || [];
+      const nextTotalPages = res.data.totalPages || 1;
+
+      setOrders(nextOrders);
+      setTotalPages(nextTotalPages);
+      orderListCache = {
+        params: requestParams,
+        orders: nextOrders,
+        totalPages: nextTotalPages,
+        scrollY: orderListCache?.scrollY || 0,
+        storedAt: Date.now(),
+      };
     } catch (err) {
       console.error("Failed to fetch orders", err);
       notify("error", "Failed to fetch orders");
@@ -176,7 +253,7 @@ export default function OrderPage() {
           headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
         }
       );
-      await fetchOrders();
+      await fetchOrders({ force: true });
     } catch (err) {
       console.error("Failed to sync orders", err);
       notify("error", "Failed to sync orders");
