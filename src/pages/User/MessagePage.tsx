@@ -123,6 +123,7 @@ type MessageListCache = {
   params: MessageListRequestParams;
   messages: Message[];
   totalPages: number;
+  scrollY: number;
   storedAt: number;
 };
 
@@ -176,8 +177,9 @@ function loadMessagePreferences() {
 
 export default function MessagePage() {
   const savedPreferences = loadMessagePreferences();
+  const cachedParams = messageListCache?.params;
   const [selected, setSelected] = useState<string[]>([]);
-  const [viewMode, setViewMode] = useState<ViewMode>(savedPreferences.viewMode);
+  const [viewMode, setViewMode] = useState<ViewMode>(cachedParams?.view_mode || savedPreferences.viewMode);
   const [messages, setMessages] = useState<Message[]>(() => messageListCache?.messages || []);
   const [_, setLoading] = useState<boolean>(false);
 
@@ -193,14 +195,14 @@ export default function MessagePage() {
   const { user } = useUser();
   const menuRef = useRef<HTMLDivElement>(null);
 
-  const [search, setSearch] = useState<string>(messageListCache?.params.search || "");
-  const [currentPage, setCurrentPage] = useState<number>(savedPreferences.currentPage);
-  const [pageSize, setPageSize] = useState(savedPreferences.pageSize);
-  const [assignedFilter, setAssignedFilter] = useState<AssignedFilter>(savedPreferences.assignedFilter);
-  const [orderFilter, setOrderFilter] = useState<OrderFilter>(savedPreferences.orderFilter);
-  const [statusFilter, setStatusFilter] = useState<string>(savedPreferences.statusFilter);
-  const [sortBy, setSortBy] = useState<SortBy>(savedPreferences.sortBy);
-  const [sortOrder, setSortOrder] = useState<SortOrder>(savedPreferences.sortOrder);
+  const [search, setSearch] = useState<string>(cachedParams?.search || "");
+  const [currentPage, setCurrentPage] = useState<number>(cachedParams?.page || savedPreferences.currentPage);
+  const [pageSize, setPageSize] = useState(cachedParams?.size || savedPreferences.pageSize);
+  const [assignedFilter, setAssignedFilter] = useState<AssignedFilter>(cachedParams?.assigned_filter || savedPreferences.assignedFilter);
+  const [orderFilter, setOrderFilter] = useState<OrderFilter>(cachedParams?.order_filter || savedPreferences.orderFilter);
+  const [statusFilter, setStatusFilter] = useState<string>(cachedParams?.status_filter || savedPreferences.statusFilter);
+  const [sortBy, setSortBy] = useState<SortBy>(cachedParams?.sort_by || savedPreferences.sortBy);
+  const [sortOrder, setSortOrder] = useState<SortOrder>(cachedParams?.sort_order || savedPreferences.sortOrder);
   const [totalPages, setTotalPages] = useState(messageListCache?.totalPages || 1);
   const [syncingGmail, setSyncingGmail] = useState(false);
   const [customPermissions, setCustomPermissions] = useState<string[]>([]);
@@ -299,6 +301,36 @@ export default function MessagePage() {
     );
   }, [viewMode, currentPage, pageSize, assignedFilter, orderFilter, statusFilter, sortBy, sortOrder]);
 
+  useEffect(() => {
+    const cachedList = messageListCache;
+    if (!cachedList || Date.now() - cachedList.storedAt >= MESSAGE_LIST_CACHE_TTL_MS) return;
+
+    const restoreScroll = window.setTimeout(() => {
+      window.scrollTo({ top: cachedList.scrollY, behavior: "auto" });
+    }, 0);
+
+    return () => {
+      window.clearTimeout(restoreScroll);
+    };
+  }, []);
+
+  useEffect(() => {
+    const saveScroll = () => {
+      if (messageListCache) {
+        messageListCache = {
+          ...messageListCache,
+          scrollY: window.scrollY,
+        };
+      }
+    };
+
+    window.addEventListener("scroll", saveScroll, { passive: true });
+    return () => {
+      saveScroll();
+      window.removeEventListener("scroll", saveScroll);
+    };
+  }, []);
+
   const fetchMessages = async (options: { force?: boolean } = {}) => {
     if (!currentCompanyId) return;
 
@@ -346,6 +378,7 @@ export default function MessagePage() {
         params: requestParams,
         messages: nextMessages,
         totalPages: nextTotalPages,
+        scrollY: messageListCache?.scrollY || 0,
         storedAt: Date.now(),
       };
     } catch (error) {
