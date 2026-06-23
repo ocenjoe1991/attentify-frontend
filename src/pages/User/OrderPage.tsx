@@ -137,12 +137,9 @@ export default function OrderPage() {
     );
   }, [pageSize, selectedShop, sortBy, sortOrder]);
 
-  // Save scroll on unmount, restore on mount
+  // Save scroll on unmount, restore after orders load
+  const hasRestoredOrderRef = useRef(false);
   useEffect(() => {
-    const savedY = sessionStorage.getItem("orderListScrollY");
-    if (savedY) {
-      restoreScrollRef.current = parseInt(savedY, 10);
-    }
     return () => {
       sessionStorage.setItem("orderListScrollY", String(window.scrollY));
     };
@@ -155,14 +152,17 @@ export default function OrderPage() {
     }
   }, [location.pathname]);
 
-  // Restore scroll after orders load
+  // Restore scroll after orders load (runs once)
   useEffect(() => {
-    if (restoreScrollRef.current && restoreScrollRef.current > 0 && orders.length > 0) {
-      const y = restoreScrollRef.current;
-      restoreScrollRef.current = null;
-      setTimeout(() => {
-        window.scrollTo({ top: y, behavior: "instant" as ScrollBehavior });
-      }, 200);
+    const savedY = sessionStorage.getItem("orderListScrollY");
+    if (savedY && !hasRestoredOrderRef.current && orders.length > 0) {
+      hasRestoredOrderRef.current = true;
+      const y = parseInt(savedY, 10);
+      if (y > 0) {
+        setTimeout(() => {
+          window.scrollTo({ top: y, behavior: "instant" as ScrollBehavior });
+        }, 200);
+      }
     }
   }, [orders]);
 
