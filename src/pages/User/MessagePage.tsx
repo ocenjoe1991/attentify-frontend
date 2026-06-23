@@ -360,6 +360,11 @@ export default function MessagePage() {
     if (!options.force && cacheMatches && cachedList) {
       setMessages(cachedList.messages);
       setTotalPages(cachedList.totalPages);
+      if (cachedList.scrollY > 0) {
+        requestAnimationFrame(() => {
+          window.scrollTo({ top: cachedList.scrollY, behavior: "instant" as ScrollBehavior });
+        });
+      }
       return;
     }
 
@@ -386,6 +391,13 @@ export default function MessagePage() {
         scrollY: messageListCache?.scrollY || 0,
         storedAt: Date.now(),
       };
+      // Restore scroll position after messages are rendered
+      const savedScrollY = messageListCache.scrollY;
+      if (savedScrollY > 0) {
+        requestAnimationFrame(() => {
+          window.scrollTo({ top: savedScrollY, behavior: "instant" as ScrollBehavior });
+        });
+      }
     } catch (error) {
       console.error("Failed to load messages:", error);
       notify("error", "Failed to load messages");
