@@ -1,5 +1,5 @@
-﻿import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+﻿import { useEffect, useState, useRef } from "react";
+import { Link, useLocation } from "react-router-dom";
 import axios from "axios";
 import Layout from "../../layouts/Layout";
 import { useNotification } from "../../context/NotificationContext";
@@ -137,37 +137,35 @@ export default function OrderPage() {
     );
   }, [pageSize, selectedShop, sortBy, sortOrder]);
 
+  // Save scroll on unmount, restore on mount
   useEffect(() => {
-    const cachedList = orderListCache;
-    if (!cachedList || Date.now() - cachedList.storedAt >= ORDER_LIST_CACHE_TTL_MS) return;
-
-    const restoreScroll = window.setTimeout(() => {
-      window.scrollTo({ top: cachedList.scrollY, behavior: "auto" });
-    }, 0);
-
+    const savedY = sessionStorage.getItem("orderListScrollY");
+    if (savedY) {
+      restoreScrollRef.current = parseInt(savedY, 10);
+    }
     return () => {
-      window.clearTimeout(restoreScroll);
+      sessionStorage.setItem("orderListScrollY", String(window.scrollY));
     };
   }, []);
 
+  // Re-fetch when navigating back from detail
   useEffect(() => {
-    const saveScroll = () => {
-      if (orderListCache) {
-        orderListCache = {
-          ...orderListCache,
-          scrollY: window.scrollY,
-        };
-      }
-    };
+    if (location.pathname === "/order") {
+      fetchOrders({ force: true });
+    }
+  }, [location.pathname]);
 
-    window.addEventListener("scroll", saveScroll, { passive: true });
-    return () => {
-      saveScroll();
-      window.removeEventListener("scroll", saveScroll);
-    };
-  }, []);
+  // Restore scroll after orders load
+  useEffect(() => {
+    if (restoreScrollRef.current && restoreScrollRef.current > 0 && orders.length > 0) {
+      const y = restoreScrollRef.current;
+      restoreScrollRef.current = null;
+      setTimeout(() => {
+        window.scrollTo({ top: y, behavior: "instant" as ScrollBehavior });
+      }, 200);
+    }
+  }, [orders]);
 
-  // Fetch all orders with search, pagination, and shop filter
   const fetchOrders = async (options: { force?: boolean } = {}) => {
     if (!currentCompanyId) return;
 

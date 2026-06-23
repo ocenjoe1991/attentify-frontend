@@ -819,7 +819,7 @@ export default function MessagePage() {
                         checked={selected.includes(msg._id)}
                         onChange={() => toggleSelect(msg._id)}
                         className="h-5 w-5 text-blue-600 border-gray-300 cursor-pointer"
-                        aria-label={`Select message ${msg.title ?? msg._id}`}
+                        aria-label={`Select message ${msg.title || msg._id}`}
                       />
                     </td>
                     <td className="px-6 py-4 w-2/10 font-medium text-gray-700">
@@ -831,7 +831,7 @@ export default function MessagePage() {
                         onMouseEnter={() => prefetchMessage(msg._id)}
                         onFocus={() => prefetchMessage(msg._id)}
                       >
-                        {msg.title ?? "(no subject)"}
+                        {msg.title || "(no subject)"}
                       </Link>
                     </td>
                     <td className="px-6 py-4 w-2/10 text-blue-700 hover:underline">
