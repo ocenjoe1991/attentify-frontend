@@ -141,12 +141,12 @@ const MessageDetailPage = () => {
   // Analyze email to get order info
   useEffect(() => {
     const fetchOrderInfo = async () => {
-      if (hasFetchedOrder.current) return;
-      hasFetchedOrder.current = true;
       if (!message || !message.messages?.length) {
         console.log("[OrderInfo] Skip: no message content for", message?._id);
         return null;
       }
+      if (hasFetchedOrder.current) return;
+      hasFetchedOrder.current = true;
       console.log("[OrderInfo] Analyzing:", message._id);
 
       try {
