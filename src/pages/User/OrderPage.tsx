@@ -102,7 +102,7 @@ export default function OrderPage() {
 
   const { notify } = useNotification();
   const { setTitle } = usePageTitle();
-
+  const location = useLocation();
   const { currentCompanyId } = useCompany();
 
   useEffect(() => {
