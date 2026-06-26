@@ -56,6 +56,9 @@ const buildOrderOptions = (orders: any[], mentionedOrderName?: string) => {
   ];
 };
 
+const hasSavedOrderResult = (order?: OrderInfo | null) =>
+  Boolean(order?.no_orders || (order?.confirmed && order?.shopify_order));
+
 const MessageDetailPage = () => {
   const { threadId } = useParams<{ threadId: string }>();
   const cachedMessage = getCachedMessageDetail(threadId);
@@ -97,7 +100,7 @@ const MessageDetailPage = () => {
     hasFetchedMessage.current = false;
     hasFetchedOrder.current = false;
     const nextCachedMessage = getCachedMessageDetail(threadId);
-    const nextCachedOrderInfo = getCachedOrderInfo(threadId);
+    const nextCachedOrderInfo = getCachedOrderInfo(threadId) || nextCachedMessage?.order_info || null;
     setLoading(!nextCachedMessage);
     setMessage(nextCachedMessage);
     setOrderInfo(nextCachedOrderInfo);
@@ -111,6 +114,10 @@ const MessageDetailPage = () => {
         if (!threadId) return;
         const nextMessage = await fetchMessageDetailCached(threadId);
         setMessage(nextMessage);
+        if (nextMessage.order_info) {
+          setOrderInfo(nextMessage.order_info);
+          setLoadingOrder(false);
+        }
 
       } catch (error) {
         console.error("Error fetching message:", error);
@@ -145,12 +152,25 @@ const MessageDetailPage = () => {
         console.log("[OrderInfo] Skip: no message content for", message?._id);
         return null;
       }
+      if (hasSavedOrderResult(message.order_info)) {
+        const savedOrderInfo = message.order_info || null;
+        setOrderInfo(savedOrderInfo);
+        setLoadingOrder(false);
+        if (savedOrderInfo?.order_id) {
+          setMentionedOrderName(savedOrderInfo.order_id);
+        }
+        if (savedOrderInfo?.msg === 'Email not matched') {
+          setReply("Please send inquiry via email from the order.");
+        } else {
+          setReply(savedOrderInfo?.msg || "");
+        }
+        return savedOrderInfo;
+      }
       if (hasFetchedOrder.current) return;
       hasFetchedOrder.current = true;
       console.log("[OrderInfo] Analyzing:", message._id);
 
       try {
-        setOrderInfo(null);
         setLoadingOrder(true);
         setError(null);
         const nextOrderInfo = await fetchOrderInfoCached(message._id);
@@ -182,6 +202,10 @@ const MessageDetailPage = () => {
         setOrderOptions([]);
         return;
       }
+      if (message?.order_info?.no_orders) {
+        setOrderOptions([]);
+        return;
+      }
 
       try {
         const res = await axios.get(`${import.meta.env.VITE_API_URL || ""}/shopify/orders`, {
@@ -207,7 +231,9 @@ const MessageDetailPage = () => {
         const analyzedOrder = await fetchOrderInfo();
         const mentionedName = analyzedOrder?.order_id || message.order_info?.order_id || "";
         setMentionedOrderName(mentionedName);
-        await fetchOrderOptions(mentionedName);
+        if (!analyzedOrder?.no_orders) {
+          await fetchOrderOptions(mentionedName);
+        }
       })();
     }
   }, [message, currentCompanyId]);
@@ -367,33 +393,34 @@ const MessageDetailPage = () => {
                 onActionCompleted={reloadOrderInfo}
                 onConfirm={async () => {
                   try {
-                    await axios.put(`${import.meta.env.VITE_API_URL || ""}/message/${message?._id}`, {
+                    const response = await axios.put(`${import.meta.env.VITE_API_URL || ""}/message/${message?._id}`, {
                       "order_info.order_id": orderInfo?.order_id,
                       "order_info.confirmed": true,
                     }, {
                       headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
                     });
+                    const confirmedOrderInfo = response.data?.order_info || {
+                      ...orderInfo,
+                      confirmed: true,
+                    };
+                    setOrderInfo(confirmedOrderInfo);
+                    if (message?._id) {
+                      setCachedOrderInfo(message._id, confirmedOrderInfo);
+                    }
                     setMessage((prevState) => {
-                      if (!prevState || !prevState.order_info || !orderInfo) {
+                      if (!prevState || !orderInfo) {
                         return prevState;
                       } else {
                         return {
                           ...prevState,
-                          order_info: {
-                            ...prevState?.order_info,
-                            order_id: orderInfo?.order_id,
-                            confirmed: true,
-                          }
+                          order_info: confirmedOrderInfo,
                         };
                       }
                     });
                     if (message && orderInfo) {
                       setCachedMessageDetail({
                         ...message,
-                        order_info: {
-                          ...orderInfo,
-                          confirmed: true,
-                        },
+                        order_info: confirmedOrderInfo,
                       });
                     }
                     notify("success", "Order confirmed");

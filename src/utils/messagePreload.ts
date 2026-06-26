@@ -87,8 +87,7 @@ export function seedMessageSummaryCache(message: Partial<Message> & { _id: strin
 
 export async function fetchOrderInfoCached(messageId: string): Promise<OrderInfo> {
   const cached = getCachedOrderInfo(messageId);
-  // Only use cache if it has a valid order_id (don't cache failed analyses)
-  if (cached && cached.order_id) return cached;
+  if (cached && (cached.order_id || cached.no_orders || cached.confirmed)) return cached;
 
   const inflight = orderInfoInflight.get(messageId);
   if (inflight) return inflight;
@@ -96,9 +95,8 @@ export async function fetchOrderInfoCached(messageId: string): Promise<OrderInfo
   const request = axios
     .post(`${API_URL}/message/analyze`, { message_id: messageId }, { headers: authHeaders() })
     .then((response) => {
-      // Only cache successful results
       const data = response.data as OrderInfo;
-      if (data.order_id) {
+      if (data.order_id || data.no_orders || data.confirmed) {
         setCachedOrderInfo(messageId, data);
       }
       return data;
