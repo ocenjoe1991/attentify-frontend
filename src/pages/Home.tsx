@@ -38,10 +38,10 @@ export default function Home() {
           <div className="hidden sm:flex sm:flex-1 sm:justify-end sm:items-center">
             <a 
               onClick={() => navigate('/login')}
-              className="mr-4 text-sm font-semibold text-gray-900">Log in</a>
+              className="mr-4 text-sm font-semibold text-gray-900 cursor-pointer">Log in</a>
             <a
               onClick={() => navigate('/signup')}
-              className=" bg-indigo-600 px-3.5 py-2.5 text-sm font-semibold text-white shadow-xs hover:bg-indigo-500 focus-visible:outline-indigo-600"
+              className=" bg-indigo-600 px-3.5 py-2.5 text-sm font-semibold text-white shadow-xs hover:bg-indigo-500 focus-visible:outline-indigo-600 cursor-pointer"
             >
               Start free trial
             </a>
@@ -74,7 +74,7 @@ export default function Home() {
             <a href="#" className="block text-base font-semibold text-gray-900">Pricing</a>
             <a href="#" className="block text-base font-semibold text-gray-900">About Us</a>
             <a href="#" className="block text-base font-semibold text-gray-900">Support</a>
-            <a onClick={() => navigate('/login')} className="block text-base font-semibold text-gray-900">Log in</a>
+            <a onClick={() => navigate('/login')} className="block text-base font-semibold text-gray-900 cursor-pointer">Log in</a>
           </div>
         </div>
       </header>
@@ -103,7 +103,7 @@ export default function Home() {
           <div className="mt-10 flex flex-col sm:flex-row sm:justify-center sm:items-center gap-4">
             <a
               onClick={() => navigate('/signup')}
-              className=" bg-indigo-600 px-5 py-3 text-sm font-semibold text-white shadow hover:bg-indigo-500"
+              className=" bg-indigo-600 px-5 py-3 text-sm font-semibold text-white shadow hover:bg-indigo-500 cursor-pointer"
             >
               Start free trial
             </a>
