@@ -17,6 +17,8 @@ interface ShopifyShop {
 export default function ShopifyPage() {
   const [shops, setShops] = useState<ShopifyShop[]>([]);
   const [loading, setLoading] = useState(false);
+  const [showAddStore, setShowAddStore] = useState(false);
+  const [shopDomain, setShopDomain] = useState("");
   const { user } = useUser();
   const { notify } = useNotification();
   const { setTitle } = usePageTitle();
@@ -51,7 +53,10 @@ export default function ShopifyPage() {
     }
   };
 
-  const buildInstallUrl = (shop?: string) => {
+  const normalizeShopDomain = (value: string) =>
+    value.trim().replace(/^https?:\/\//, "").replace(/\/.*$/, "");
+
+  const buildOAuthUrl = (shop: string) => {
     const user_id = user?.id || "";
     const company_id = currentCompanyId || user?.company_id || "";
     const baseUrl = import.meta.env.VITE_API_URL || "";
@@ -61,21 +66,29 @@ export default function ShopifyPage() {
       return "";
     }
 
+    const normalizedShop = normalizeShopDomain(shop);
+    if (!normalizedShop.endsWith(".myshopify.com")) {
+      notify("error", "Please enter a valid .myshopify.com store domain.");
+      return "";
+    }
+
     const params = new URLSearchParams({
       user_id,
       company_id,
+      shop: normalizedShop,
     });
-    if (shop) {
-      params.set("shop", shop);
-    }
 
     return `${baseUrl}/shopify/auth?${params.toString()}`;
   };
 
   const handleConnect = () => {
-    const installUrl = buildInstallUrl();
-    if (!installUrl) return;
-    window.location.href = installUrl;
+    setShowAddStore((current) => !current);
+  };
+
+  const handleSubmitStore = () => {
+    const oauthUrl = buildOAuthUrl(shopDomain);
+    if (!oauthUrl) return;
+    window.location.href = oauthUrl;
   };
 
   const handleDisconnect = async (id: string) => {
@@ -106,6 +119,35 @@ export default function ShopifyPage() {
               </button>
             </RoleWrapper>
           </div>
+
+          {showAddStore && (
+            <div className="mb-4 border border-gray-200 bg-gray-50 p-3">
+              <label className="mb-2 block text-sm font-medium text-gray-700" htmlFor="shopify-domain">
+                Shopify store domain
+              </label>
+              <div className="flex flex-col gap-2 sm:flex-row">
+                <input
+                  id="shopify-domain"
+                  type="text"
+                  value={shopDomain}
+                  onChange={(event) => setShopDomain(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") {
+                      handleSubmitStore();
+                    }
+                  }}
+                  placeholder="punkcasesnz.myshopify.com"
+                  className="min-w-0 flex-1 border border-gray-300 px-3 py-2 text-sm"
+                />
+                <button
+                  onClick={handleSubmitStore}
+                  className="bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+                >
+                  Connect
+                </button>
+              </div>
+            </div>
+          )}
 
           {loading ? (
             <p className="text-gray-500">Loading Shopify stores...</p>
