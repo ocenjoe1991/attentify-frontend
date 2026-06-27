@@ -69,6 +69,14 @@ type OrderListCache = {
   storedAt: number;
 };
 
+type SyncProgress = {
+  company_id?: string;
+  shop?: string;
+  page?: number;
+  synced_count?: number;
+  done?: boolean;
+};
+
 let orderListCache: OrderListCache | null = null;
 
 function loadOrderPreferences() {
@@ -100,6 +108,8 @@ export default function OrderPage() {
   const [totalPages, setTotalPages] = useState(orderListCache?.totalPages || 1);
   const [sortBy, setSortBy] = useState<SortField>(cachedParams?.sort_by || savedPreferences.sortBy);
   const [sortOrder, setSortOrder] = useState<SortOrder>(cachedParams?.sort_order || savedPreferences.sortOrder);
+  const [syncingOrders, setSyncingOrders] = useState(false);
+  const [syncProgress, setSyncProgress] = useState<SyncProgress | null>(null);
 
   const { notify } = useNotification();
   const { setTitle } = usePageTitle();
@@ -127,16 +137,26 @@ export default function OrderPage() {
     fetchShops();
   }, [currentCompanyId]);
 
-  // Listen for sync complete events to auto-refresh order list
+  // Listen for sync progress/complete events to auto-refresh order list
   useEffect(() => {
     const socket = initSocket();
+    const handleSyncProgress = (data: SyncProgress) => {
+      if (data.company_id && data.company_id === currentCompanyId) {
+        setSyncingOrders(true);
+        setSyncProgress(data);
+      }
+    };
     const handleSyncComplete = (data: { company_id?: string }) => {
       if (data.company_id && data.company_id === currentCompanyId) {
+        setSyncingOrders(false);
+        setSyncProgress(null);
         fetchOrders({ force: true });
       }
     };
+    socket.on("shopify_sync_progress", handleSyncProgress);
     socket.on("shopify_sync_complete", handleSyncComplete);
     return () => {
+      socket.off("shopify_sync_progress", handleSyncProgress);
       socket.off("shopify_sync_complete", handleSyncComplete);
     };
   }, [currentCompanyId]);
@@ -248,7 +268,8 @@ export default function OrderPage() {
 
   const handleSyncOrders = async () => {
     if (!currentCompanyId) return;
-    setLoading(true);
+    setSyncingOrders(true);
+    setSyncProgress(null);
     try {
       await axios.post(
         `${import.meta.env.VITE_API_URL || ""}/shopify/orders/sync`,
@@ -257,12 +278,10 @@ export default function OrderPage() {
           headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
         }
       );
-      await fetchOrders({ force: true });
     } catch (err) {
       console.error("Failed to sync orders", err);
+      setSyncingOrders(false);
       notify("error", "Failed to sync orders");
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -346,11 +365,21 @@ export default function OrderPage() {
 
             <button
               onClick={handleSyncOrders}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 text-sm font-medium"
+              disabled={syncingOrders}
+              className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white px-4 py-2 text-sm font-medium"
             >
-              + Sync Orders
+              {syncingOrders ? "Syncing Orders" : "+ Sync Orders"}
             </button>
           </div>
+
+          {syncingOrders && (
+            <div className="mb-4 border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-800">
+              Syncing {syncProgress?.shop || "Shopify orders"}
+              {syncProgress?.synced_count !== undefined
+                ? `: ${syncProgress.synced_count} orders saved`
+                : "..."}
+            </div>
+          )}
 
           {/* Table */}
           {loading && hasLoadedOrders && (
