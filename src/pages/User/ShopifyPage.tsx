@@ -78,23 +78,13 @@ export default function ShopifyPage() {
     window.location.href = installUrl;
   };
 
-  const handleConnectStore = (shop: string) => {
-    const installUrl = buildInstallUrl(shop);
-    if (!installUrl) return;
-    window.location.href = installUrl;
-  };
-
   const handleDisconnect = async (id: string) => {
     try {
       await axios.delete(`${import.meta.env.VITE_API_URL || ""}/shopify/${id}`, {
         headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
       });
-      setShops(prev =>
-        prev.map(shop =>
-          shop._id === id ? { ...shop, status: "disconnected" as const } : shop
-        )
-      );
-      notify("success", "Shopify store disconnected");
+      setShops(prev => prev.filter(shop => shop._id !== id));
+      notify("success", "Shopify store removed");
     } catch (err) {
       console.error("Failed to disconnect Shopify shop", err);
       notify("error", "Failed to disconnect Shopify shop");
@@ -137,16 +127,9 @@ export default function ShopifyPage() {
                         onClick={() => handleDisconnect(shop._id)}
                         className="text-sm text-red-500 hover:underline"
                       >
-                        Disconnect
-                      </button>
-                    ) : (
-                      <button
-                        onClick={() => handleConnectStore(shop.shop)}
-                        className="text-sm text-blue-600 hover:underline"
-                      >
-                        Connect
-                      </button>
-                    )}
+                      Remove
+                    </button>
+                    ) : null}
                   </RoleWrapper>
                 </li>
               ))}
