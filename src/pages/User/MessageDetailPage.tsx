@@ -383,8 +383,8 @@ const MessageDetailPage = () => {
     <Layout>
       {loading && <div className="p-4">Loading...</div>}
       {!loading && (
-        <div className="flex h-[calc(100vh-5rem)] flex-col overflow-hidden p-4">
-          <div className="mb-4 shrink-0">
+        <div className="flex h-[calc(100vh-5rem)] flex-col overflow-hidden p-3">
+          <div className="mb-3 shrink-0">
             <Link
               to="/message"
               className="inline-flex items-center gap-2 border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
@@ -394,21 +394,21 @@ const MessageDetailPage = () => {
             </Link>
           </div>
 
-          <div className="flex min-h-0 w-full flex-1 gap-6 overflow-hidden">
+          <div className="flex min-h-0 w-full flex-1 gap-4 overflow-hidden">
             <div className="min-w-0 flex-1 overflow-y-auto pr-2">
-              <div className="flex flex-col gap-6">
-                <div className="grid gap-6 lg:grid-cols-2">
+              <div className="flex flex-col gap-4">
+                <div className="grid gap-4 lg:grid-cols-2">
                   {message && (
-                    <div className="border border-gray-300 bg-white p-4">
-                      <div className="mb-3 text-lg font-semibold text-gray-900">Ticket</div>
-                      <div className="flex flex-col gap-4">
+                    <div className="border border-gray-300 bg-white p-3">
+                      <div className="mb-2 text-base font-semibold text-gray-900">Ticket</div>
+                      <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
                         <label className="flex flex-col gap-1 text-xs font-medium text-gray-600">
                           Status
                           <select
                             value={message.status || "Open"}
                             onChange={(event) => updateTicketStatus(event.target.value)}
                             disabled={updatingStatus}
-                            className="border border-gray-300 px-3 py-2 text-sm font-normal text-gray-700 disabled:bg-gray-50 disabled:text-gray-400"
+                            className="border border-gray-300 px-2 py-1.5 text-sm font-normal text-gray-700 disabled:bg-gray-50 disabled:text-gray-400"
                           >
                             {ticketStatusList.map((status) => (
                               <option key={status} value={status}>
@@ -423,7 +423,7 @@ const MessageDetailPage = () => {
                             <select
                               value={message.default_store_id || ""}
                               onChange={(event) => updateMessageStore(event.target.value)}
-                              className="border border-gray-300 px-3 py-2 text-sm font-normal text-gray-700"
+                              className="border border-gray-300 px-2 py-1.5 text-sm font-normal text-gray-700"
                             >
                               <option value="">Auto / Review</option>
                               {(message.order_matching_store_ids || []).map((storeId, index) => (
@@ -447,6 +447,7 @@ const MessageDetailPage = () => {
                     mentionedOrderName={mentionedOrderName}
                     section="customer"
                     layout="detail"
+                    compact
                     onOrderNameChanged={() => {}}
                     showConfirmButton={false}
                     isOrderConfirmed={false}
@@ -478,7 +479,7 @@ const MessageDetailPage = () => {
                                   date={entry.timestamp}
                                   htmlBody={entry.content}
                                   threadId={threadId}
-                                  containerClassName="w-full border border-gray-300 bg-white p-4 mb-4"
+                                  containerClassName="w-full border border-gray-300 bg-white p-3 mb-3"
                                   bodyMaxHeight={360}
                                   //expended={isLast} // <-- only last element expanded
                                   replyFromParent={reply}
@@ -493,7 +494,7 @@ const MessageDetailPage = () => {
                                   date={entry.timestamp}
                                   body={entry.content}
                                   isExpanded={isLast} // <-- only last element expanded
-                                  containerClassName="w-full border border-gray-300 bg-white p-6 mb-4"
+                                  containerClassName="w-full border border-gray-300 bg-white p-4 mb-3"
                                   bodyMaxHeight={360}
                                 />
                               )}

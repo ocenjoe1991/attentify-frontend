@@ -864,8 +864,8 @@ export default function MessagePage() {
 
   return (
     <Layout>
-      <div className="flex h-[calc(100vh-4rem)] flex-col overflow-hidden p-4">
-        <div className="mb-4 flex shrink-0 flex-wrap items-center justify-between gap-3">
+      <div className="flex h-[calc(100vh-4rem)] flex-col overflow-hidden p-3">
+        <div className="mb-2 flex shrink-0 flex-wrap items-center justify-between gap-3">
           <div className="flex gap-6">
             {modes.map(([mode, icon]) => (
               <button
@@ -899,7 +899,7 @@ export default function MessagePage() {
           </div>
         </div>
 
-        <div className="mb-4 flex shrink-0 flex-wrap items-center gap-3">
+        <div className="mb-3 flex shrink-0 flex-wrap items-center gap-2">
           <label className="flex min-w-[260px] flex-col gap-1 text-xs font-medium text-gray-600">
             Search
             <div className="relative">
@@ -908,9 +908,9 @@ export default function MessagePage() {
                 placeholder="Search messages"
                 value={search}
                 onChange={onSearchChange}
-                className="w-full border border-gray-300 px-3 py-2 pl-9 text-sm font-normal text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full border border-gray-300 px-3 py-1.5 pl-9 text-sm font-normal text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
-              <MagnifyingGlassIcon className="absolute left-3 top-2.5 h-4 w-4 text-gray-500" />
+              <MagnifyingGlassIcon className="absolute left-3 top-2 h-4 w-4 text-gray-500" />
             </div>
           </label>
 
@@ -922,7 +922,7 @@ export default function MessagePage() {
                 setAssignedFilter(e.target.value as AssignedFilter);
                 setCurrentPage(1);
               }}
-              className="border border-gray-300 px-3 py-2 text-sm font-normal text-gray-700"
+              className="border border-gray-300 px-3 py-1.5 text-sm font-normal text-gray-700"
             >
               <option value="all">All tickets</option>
               <option value="assigned">Assigned</option>
@@ -938,7 +938,7 @@ export default function MessagePage() {
                 setOrderFilter(e.target.value as OrderFilter);
                 setCurrentPage(1);
               }}
-              className="border border-gray-300 px-3 py-2 text-sm font-normal text-gray-700"
+              className="border border-gray-300 px-3 py-1.5 text-sm font-normal text-gray-700"
             >
               <option value="all">Any order status</option>
               <option value="order">Order-related</option>
@@ -955,7 +955,7 @@ export default function MessagePage() {
                 setStoreFilter(e.target.value);
                 setCurrentPage(1);
               }}
-              className="border border-gray-300 px-3 py-2 text-sm font-normal text-gray-700"
+              className="border border-gray-300 px-3 py-1.5 text-sm font-normal text-gray-700"
             >
               <option value="all">Any store</option>
               <option value="unassigned">No store set</option>
@@ -975,7 +975,7 @@ export default function MessagePage() {
                 setStatusFilter(e.target.value);
                 setCurrentPage(1);
               }}
-              className="border border-gray-300 px-3 py-2 text-sm font-normal text-gray-700"
+              className="border border-gray-300 px-3 py-1.5 text-sm font-normal text-gray-700"
             >
               <option value="all">All statuses</option>
               {statusFilterOptions.map((status) => (
@@ -987,7 +987,7 @@ export default function MessagePage() {
           </label>
         </div>
 
-        <div className="mb-4 flex min-h-[54px] shrink-0 flex-wrap items-center justify-between gap-3 border border-gray-200 bg-gray-50 px-4 py-3 text-sm">
+        <div className="mb-3 flex min-h-[42px] shrink-0 flex-wrap items-center justify-between gap-2 border border-gray-200 bg-gray-50 px-3 py-2 text-sm">
           <span className="font-medium text-gray-700">
             {selected.length > 0
               ? `${selected.length} selected`
@@ -999,7 +999,7 @@ export default function MessagePage() {
                 type="button"
                 onClick={() => handleBulkAction("archive")}
                 disabled={selected.length === 0}
-                className="border border-blue-300 bg-white px-3 py-1.5 text-blue-700 hover:bg-blue-100 disabled:cursor-not-allowed disabled:border-gray-200 disabled:text-gray-400 disabled:hover:bg-white"
+                className="border border-blue-300 bg-white px-3 py-1 text-blue-700 hover:bg-blue-100 disabled:cursor-not-allowed disabled:border-gray-200 disabled:text-gray-400 disabled:hover:bg-white"
               >
                 Archive
               </button>
@@ -1009,7 +1009,7 @@ export default function MessagePage() {
                 type="button"
                 onClick={() => handleBulkAction("unarchive")}
                 disabled={selected.length === 0}
-                className="border border-blue-300 bg-white px-3 py-1.5 text-blue-700 hover:bg-blue-100 disabled:cursor-not-allowed disabled:border-gray-200 disabled:text-gray-400 disabled:hover:bg-white"
+                className="border border-blue-300 bg-white px-3 py-1 text-blue-700 hover:bg-blue-100 disabled:cursor-not-allowed disabled:border-gray-200 disabled:text-gray-400 disabled:hover:bg-white"
               >
                 Restore to Inbox
               </button>
@@ -1019,7 +1019,7 @@ export default function MessagePage() {
                 type="button"
                 onClick={() => handleBulkAction("restore")}
                 disabled={selected.length === 0}
-                className="border border-blue-300 bg-white px-3 py-1.5 text-blue-700 hover:bg-blue-100 disabled:cursor-not-allowed disabled:border-gray-200 disabled:text-gray-400 disabled:hover:bg-white"
+                className="border border-blue-300 bg-white px-3 py-1 text-blue-700 hover:bg-blue-100 disabled:cursor-not-allowed disabled:border-gray-200 disabled:text-gray-400 disabled:hover:bg-white"
               >
                 Restore
               </button>
@@ -1029,7 +1029,7 @@ export default function MessagePage() {
                 type="button"
                 onClick={() => handleBulkAction("trash")}
                 disabled={selected.length === 0}
-                className="border border-red-200 bg-white px-3 py-1.5 text-red-700 hover:bg-red-50 disabled:cursor-not-allowed disabled:border-gray-200 disabled:text-gray-400 disabled:hover:bg-white"
+                className="border border-red-200 bg-white px-3 py-1 text-red-700 hover:bg-red-50 disabled:cursor-not-allowed disabled:border-gray-200 disabled:text-gray-400 disabled:hover:bg-white"
               >
                 Move to Trash
               </button>
@@ -1039,7 +1039,7 @@ export default function MessagePage() {
                 type="button"
                 onClick={() => handleBulkAction("delete")}
                 disabled={selected.length === 0}
-                className="border border-red-300 bg-white px-3 py-1.5 text-red-700 hover:bg-red-50 disabled:cursor-not-allowed disabled:border-gray-200 disabled:text-gray-400 disabled:hover:bg-white"
+                className="border border-red-300 bg-white px-3 py-1 text-red-700 hover:bg-red-50 disabled:cursor-not-allowed disabled:border-gray-200 disabled:text-gray-400 disabled:hover:bg-white"
               >
                 Delete Permanently
               </button>
@@ -1056,7 +1056,7 @@ export default function MessagePage() {
               type="button"
               onClick={handleSyncGmail}
               disabled={syncingGmail || !currentCompanyId}
-              className="inline-flex items-center gap-2 bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:bg-blue-300"
+              className="inline-flex items-center gap-2 bg-blue-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-blue-700 disabled:bg-blue-300"
             >
               <ArrowPathIcon className={`h-4 w-4 ${syncingGmail ? "animate-spin" : ""}`} />
               {syncingGmail ? "Syncing" : "Sync Gmail"}

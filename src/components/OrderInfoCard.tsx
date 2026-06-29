@@ -16,6 +16,7 @@ interface OrderInfoCardProps {
   readOnlyOrderSelection?: boolean;
   layout?: "sidebar" | "detail";
   section?: "all" | "customer" | "order";
+  compact?: boolean;
   onOrderNameChanged: (orderName: string) => void;
   showConfirmButton: boolean,
   isOrderConfirmed?: boolean;
@@ -209,6 +210,7 @@ const OrderInfoCard: React.FC<OrderInfoCardProps> = ({
   readOnlyOrderSelection = false,
   layout = "sidebar",
   section = "all",
+  compact = false,
   onOrderNameChanged, 
   showConfirmButton, 
   isOrderConfirmed = false,
@@ -250,7 +252,7 @@ const OrderInfoCard: React.FC<OrderInfoCardProps> = ({
     mentionedOrderName && selectedOrderName && mentionedOrderName !== selectedOrderName
   );
   const cardClassName = layout === "detail"
-    ? "w-full border border-gray-300 bg-white p-5"
+    ? `w-full border border-gray-300 bg-white ${compact ? "p-3" : "p-5"}`
     : "w-[380px] border border-gray-300 bg-white p-4";
   const showCustomerSection = section === "all" || section === "customer";
   const showOrderSection = section === "all" || section === "order";
@@ -440,15 +442,19 @@ const OrderInfoCard: React.FC<OrderInfoCardProps> = ({
   if (loading) {
     return (
       <div className={cardClassName}>
-        <h2 className="mb-4 text-lg font-bold">{showCustomerSection && !showOrderSection ? "Customer" : "Order"}</h2>
-        <div className="text-gray-500">Loading...</div>
+        <h2 className={`${compact ? "mb-2 text-base" : "mb-4 text-lg"} font-bold`}>
+          {showCustomerSection && !showOrderSection ? "Customer" : "Order"}
+        </h2>
+        <div className={`${compact ? "text-sm" : ""} text-gray-500`}>Loading...</div>
       </div>
     );
   }
   if (error) {
     return (
       <div className={cardClassName}>
-        <h2 className="mb-4 text-lg font-bold">{showCustomerSection && !showOrderSection ? "Customer" : "Order"}</h2>
+        <h2 className={`${compact ? "mb-2 text-base" : "mb-4 text-lg"} font-bold`}>
+          {showCustomerSection && !showOrderSection ? "Customer" : "Order"}
+        </h2>
         <div className="text-red-500">{error}</div>
       </div>
     );
@@ -456,8 +462,10 @@ const OrderInfoCard: React.FC<OrderInfoCardProps> = ({
   if (!order) {
     return (
       <div className={cardClassName}>
-        <h2 className="mb-4 text-lg font-bold">{showCustomerSection && !showOrderSection ? "Customer" : "Order"}</h2>
-        <div className="text-gray-500">
+        <h2 className={`${compact ? "mb-2 text-base" : "mb-4 text-lg"} font-bold`}>
+          {showCustomerSection && !showOrderSection ? "Customer" : "Order"}
+        </h2>
+        <div className={`${compact ? "text-sm" : ""} text-gray-500`}>
           {showCustomerSection && !showOrderSection ? "No customer information found." : "No order information found."}
         </div>
       </div>
@@ -468,33 +476,33 @@ const OrderInfoCard: React.FC<OrderInfoCardProps> = ({
     <>
     {showCustomerSection && (
       <div className={cardClassName}>
-        <h2 className="text-lg font-bold mb-5">Customer</h2>
+        <h2 className={`${compact ? "mb-2 text-base" : "mb-5 text-lg"} font-bold`}>Customer</h2>
         {order.shopify_order?.customer ? (
-            <>
-              <div className="flex justify-between mb-2">
+            <div className={compact ? "grid gap-x-4 gap-y-1 text-sm md:grid-cols-2" : ""}>
+              <div className={`flex justify-between gap-3 ${compact ? "" : "mb-2"}`}>
                 <span className="font-semibold">Name:</span>
-                <span>{order.shopify_order.customer.name || "-"}</span>
+                <span className="text-right">{order.shopify_order.customer.name || "-"}</span>
               </div>
 
-              <div className="flex justify-between mb-2">
+              <div className={`flex justify-between gap-3 ${compact ? "" : "mb-2"}`}>
                 <span className="font-semibold">Email:</span>
-                <span>{order.shopify_order.customer.email || "-"}</span>
+                <span className="min-w-0 truncate text-right">{order.shopify_order.customer.email || "-"}</span>
               </div>
 
-              <div className="flex justify-between mb-2">
+              <div className={`flex justify-between gap-3 ${compact ? "" : "mb-2"}`}>
                 <span className="font-semibold">Phone:</span>
-                <span>{order.shopify_order.customer.phone || "-"}</span>
+                <span className="text-right">{order.shopify_order.customer.phone || "-"}</span>
               </div>
 
-              <div className="flex justify-between mb-2">
+              <div className={`flex justify-between gap-3 ${compact ? "" : "mb-2"}`}>
                 <span className="font-semibold">Address:</span>
-                <span>
+                <span className="min-w-0 truncate text-right">
                   {order.shopify_order.customer.default_address?.address1 || "-"}
                 </span>
               </div>
-            </>
+            </div>
         ) : (
-          <div className="text-gray-500">No customer information found.</div>
+          <div className={`${compact ? "text-sm" : ""} text-gray-500`}>No customer information found.</div>
         )}
       </div>
     )}
