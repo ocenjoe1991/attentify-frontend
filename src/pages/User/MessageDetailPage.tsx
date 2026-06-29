@@ -485,6 +485,8 @@ const MessageDetailPage = () => {
                                   date={entry.timestamp}
                                   htmlBody={entry.content}
                                   threadId={threadId}
+                                  messageId={message._id}
+                                  attachments={entry.metadata?.attachments || []}
                                   containerClassName="w-full border border-gray-300 bg-white p-3 mb-3"
                                   bodyMaxHeight={360}
                                   //expended={isLast} // <-- only last element expanded
@@ -514,6 +516,7 @@ const MessageDetailPage = () => {
                       <EmailReplySection
                         threadId={threadId}
                         replyFromParent={reply}
+                        onSent={reloadMessage}
                       />
                     )}
 
