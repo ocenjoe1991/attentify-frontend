@@ -91,6 +91,12 @@ const formatActionDate = (value?: string) => {
   });
 };
 
+const normalizeOrderName = (value?: string | number | null) =>
+  String(value || "")
+    .trim()
+    .replace(/^#+/, "")
+    .toUpperCase();
+
 const renderActionItems = (action: OrderAction) => {
   const details = action.details || {};
   const lineItems = details.line_items || [];
@@ -249,7 +255,9 @@ const OrderInfoCard: React.FC<OrderInfoCardProps> = ({
   const isCancelDisabled = Boolean(cancelDisabledReason);
   const selectedOrderName = order?.shopify_order?.name || order?.order_id || "";
   const isDifferentFromMentioned = Boolean(
-    mentionedOrderName && selectedOrderName && mentionedOrderName !== selectedOrderName
+    mentionedOrderName &&
+      selectedOrderName &&
+      normalizeOrderName(mentionedOrderName) !== normalizeOrderName(selectedOrderName)
   );
   const cardClassName = layout === "detail"
     ? `w-full border border-gray-300 bg-white ${compact ? "p-3" : "p-5"}`

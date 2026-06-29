@@ -36,8 +36,14 @@ const ticketStatusList = [
   "Canceled",
 ];
 
+const normalizeOrderName = (value?: string | number | null) =>
+  String(value || "")
+    .trim()
+    .replace(/^#+/, "")
+    .toUpperCase();
+
 const buildOrderOptions = (orders: any[], mentionedOrderName?: string) => {
-  const normalizedMentioned = mentionedOrderName?.trim();
+  const normalizedMentioned = normalizeOrderName(mentionedOrderName);
   const mentionedOrders: any[] = [];
   const otherOrders: any[] = [];
 
@@ -47,7 +53,7 @@ const buildOrderOptions = (orders: any[], mentionedOrderName?: string) => {
       label: item.name,
     };
 
-    if (normalizedMentioned && item.name === normalizedMentioned) {
+    if (normalizedMentioned && normalizeOrderName(item.name) === normalizedMentioned) {
       mentionedOrders.push(option);
     } else {
       otherOrders.push(option);
