@@ -180,7 +180,7 @@ export default function GmailAccountPage() {
                             onChange={(e) => handleStoreSelect(account.id, e.target.value)}
                             className="border border-gray-300 rounded px-2 py-1 text-sm"
                           >
-                            <option value="">No store restriction</option>
+                            <option value="">No store selected</option>
                             {stores.map((store) => (
                               <option key={store.id} value={store.id}>
                                 {store.shop}
@@ -189,7 +189,7 @@ export default function GmailAccountPage() {
                           </select>
                         ) : (
                           <span className="text-gray-700">
-                            {account.store?.shop || "No store restriction"}
+                            {account.store?.shop || "No store selected"}
                           </span>
                         )}
                       </td>
