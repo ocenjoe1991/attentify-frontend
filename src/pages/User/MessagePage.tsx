@@ -45,6 +45,14 @@ interface Message {
   assigned_to?: Member | null;
   order_match_status?: "matched" | "possible" | "unmatched" | "not_order" | "unknown";
   order_info?: OrderInfo;
+  inbox_email?: string;
+  default_store_id?: string;
+  default_store_shop?: string;
+}
+
+interface Store {
+  id: string;
+  shop: string;
 }
 
 type ViewMode = "inbox" | "archived" | "trashed";
@@ -105,6 +113,7 @@ const defaultMessagePreferences = {
   pageSize: 10,
   assignedFilter: "all" as AssignedFilter,
   orderFilter: "all" as OrderFilter,
+  storeFilter: "all",
   statusFilter: "all",
   sortBy: "created_at" as SortBy,
   sortOrder: "desc" as SortOrder,
@@ -118,6 +127,7 @@ type MessageListRequestParams = {
   view_mode: ViewMode;
   assigned_filter: AssignedFilter;
   order_filter: OrderFilter;
+  store_id: string;
   status_filter: string;
   sort_by: SortBy;
   sort_order: SortOrder;
@@ -204,9 +214,11 @@ export default function MessagePage() {
   const [pageSize, setPageSize] = useState(cachedParams?.size || savedPreferences.pageSize);
   const [assignedFilter, setAssignedFilter] = useState<AssignedFilter>(cachedParams?.assigned_filter || savedPreferences.assignedFilter);
   const [orderFilter, setOrderFilter] = useState<OrderFilter>(cachedParams?.order_filter || savedPreferences.orderFilter);
+  const [storeFilter, setStoreFilter] = useState<string>(cachedParams?.store_id || savedPreferences.storeFilter);
   const [statusFilter, setStatusFilter] = useState<string>(cachedParams?.status_filter || savedPreferences.statusFilter);
   const [sortBy, setSortBy] = useState<SortBy>(cachedParams?.sort_by || savedPreferences.sortBy);
   const [sortOrder, setSortOrder] = useState<SortOrder>(cachedParams?.sort_order || savedPreferences.sortOrder);
+  const [stores, setStores] = useState<Store[]>([]);
   const [totalPages, setTotalPages] = useState(messageListCache?.totalPages || 1);
   const [syncingGmail, setSyncingGmail] = useState(false);
   const [customPermissions, setCustomPermissions] = useState<string[]>([]);
@@ -298,12 +310,13 @@ export default function MessagePage() {
         pageSize,
         assignedFilter,
         orderFilter,
+        storeFilter,
         statusFilter,
         sortBy,
         sortOrder,
       })
     );
-  }, [viewMode, currentPage, pageSize, assignedFilter, orderFilter, statusFilter, sortBy, sortOrder]);
+  }, [viewMode, currentPage, pageSize, assignedFilter, orderFilter, storeFilter, statusFilter, sortBy, sortOrder]);
 
   const hasRestoredRef = useRef(false);
   const forceRefreshRef = useRef(false);
@@ -319,6 +332,7 @@ export default function MessagePage() {
       view_mode: viewMode,
       assigned_filter: assignedFilter,
       order_filter: orderFilter,
+      store_id: storeFilter === "all" ? "" : storeFilter,
       status_filter: effectiveStatusFilter,
       sort_by: sortBy,
       sort_order: sortOrder,
@@ -372,7 +386,28 @@ export default function MessagePage() {
 
   useEffect(() => {
     fetchMessages();
-  }, [currentCompanyId, currentPage, pageSize, search, viewMode, assignedFilter, orderFilter, effectiveStatusFilter, sortBy, sortOrder]);
+  }, [currentCompanyId, currentPage, pageSize, search, viewMode, assignedFilter, orderFilter, storeFilter, effectiveStatusFilter, sortBy, sortOrder]);
+
+  useEffect(() => {
+    if (!currentCompanyId) return;
+
+    const fetchStores = async () => {
+      try {
+        const response = await axios.get(
+          `${import.meta.env.VITE_API_URL || ""}/gmail/company_accounts/${currentCompanyId}`,
+          {
+            headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+          }
+        );
+        setStores(response.data?.stores || []);
+      } catch (error) {
+        console.error("Failed to load message store filters:", error);
+        setStores([]);
+      }
+    };
+
+    fetchStores();
+  }, [currentCompanyId]);
 
   // Reset restore flag on mount, restore scroll before paint
   useLayoutEffect(() => {
@@ -387,7 +422,7 @@ export default function MessagePage() {
 
   useEffect(() => {
     setSelected([]);
-  }, [viewMode, search, assignedFilter, orderFilter, statusFilter, sortBy, sortOrder]);
+  }, [viewMode, search, assignedFilter, orderFilter, storeFilter, statusFilter, sortBy, sortOrder]);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -823,6 +858,26 @@ export default function MessagePage() {
           </label>
 
           <label className="flex flex-col gap-1 text-xs font-medium text-gray-600">
+            Store
+            <select
+              value={storeFilter}
+              onChange={(e) => {
+                setStoreFilter(e.target.value);
+                setCurrentPage(1);
+              }}
+              className="border border-gray-300 px-3 py-2 text-sm font-normal text-gray-700"
+            >
+              <option value="all">All stores</option>
+              <option value="unassigned">Unassigned</option>
+              {stores.map((store) => (
+                <option key={store.id} value={store.id}>
+                  {store.shop}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label className="flex flex-col gap-1 text-xs font-medium text-gray-600">
             Status
             <select
               value={statusFilter}
@@ -926,13 +981,15 @@ export default function MessagePage() {
                     aria-label="Select all messages"
                   />
                 </th>
-                <th className="px-6 py-3 w-2/10 text-left">Client</th>
-                <th className="px-6 py-3 w-4/10 text-left">Title</th>
-                <th className="px-6 py-3 w-2/10 text-left">Ticket</th>
-                <th className="px-6 py-3 w-1/10 text-left">Order</th>
-                <th className="px-6 py-3 w-1/10 text-left">Assigned</th>
-                <th className="px-6 py-3 w-1/10 text-left">Status</th>
-                <th className="px-6 py-3 w-2/10 text-center">
+                <th className="px-4 py-3 min-w-[150px] text-left">Client</th>
+                <th className="px-4 py-3 min-w-[170px] text-left">Inbox</th>
+                <th className="px-4 py-3 min-w-[170px] text-left">Store</th>
+                <th className="px-4 py-3 min-w-[240px] text-left">Title</th>
+                <th className="px-4 py-3 min-w-[120px] text-left">Ticket</th>
+                <th className="px-4 py-3 min-w-[110px] text-left">Order</th>
+                <th className="px-4 py-3 min-w-[130px] text-left">Assigned</th>
+                <th className="px-4 py-3 min-w-[130px] text-left">Status</th>
+                <th className="px-4 py-3 min-w-[170px] text-center">
                       Created At
                     </th>
               </tr>
@@ -940,7 +997,7 @@ export default function MessagePage() {
             <tbody>
               {filteredMessages.length === 0 ? (
                 <tr>
-                  <td className="p-8 text-gray-400 text-center" colSpan={8}>
+                  <td className="p-8 text-gray-400 text-center" colSpan={10}>
                     No {viewLabel.toLowerCase()} emails found.
                   </td>
                 </tr>
@@ -959,10 +1016,16 @@ export default function MessagePage() {
                         aria-label={`Select message ${msg.title || msg._id}`}
                       />
                     </td>
-                    <td className="px-6 py-4 w-2/10 font-medium text-gray-700">
+                    <td className="px-4 py-4 font-medium text-gray-700">
                       {msg.client}
                     </td>
-                    <td className="px-6 py-4 w-4/10 text-blue-700 hover:underline">
+                    <td className="px-4 py-4 text-sm text-gray-600">
+                      {msg.inbox_email || "-"}
+                    </td>
+                    <td className="px-4 py-4 text-sm text-gray-600">
+                      {msg.default_store_shop || "Unassigned"}
+                    </td>
+                    <td className="px-4 py-4 text-blue-700 hover:underline">
                       <Link
                         to={`/message/${msg._id}`}
                         state={{ scrollY: window.scrollY }}
@@ -974,16 +1037,16 @@ export default function MessagePage() {
                         {msg.title || "(no subject)"}
                       </Link>
                     </td>
-                    <td className="px-6 py-4 w-2/10 text-blue-700 hover:underline">
+                    <td className="px-4 py-4 text-blue-700 hover:underline">
                       {msg.ticket?? ""}
                     </td>
-                    <td className="px-6 py-4 w-1/10">
+                    <td className="px-4 py-4">
                       <span className={`inline-block px-2 py-1 text-xs font-semibold rounded ${orderStatusClass(msg.order_match_status)}`}>
                         {orderStatusLabel(msg.order_match_status)}
                       </span>
                     </td>
                     {/* Assigned */}
-                    <td className="px-6 py-4 w-1/10">
+                    <td className="px-4 py-4">
                       {ownerRoles.includes(userRole) ? (
                         <button
                           className="flex items-center gap-2 px-2 py-1 bg-gray-100 hover:bg-blue-50 rounded cursor-pointer"
@@ -1057,7 +1120,7 @@ export default function MessagePage() {
                       )}
                     </td>
                     {/* Status */}
-                    <td className="px-6 py-4 w-1/10">
+                    <td className="px-4 py-4">
                       {canUpdateStatus ? (
                         // Clickable status button for allowed roles
                         <button
@@ -1110,7 +1173,7 @@ export default function MessagePage() {
                         </div>
                       )}
                     </td>
-                    <td className="px-6 py-4 w-2/10 text-sm text-gray-500 text-center">
+                    <td className="px-4 py-4 text-sm text-gray-500 text-center">
                       {msg.started_at ? new Date(msg.started_at).toLocaleString() : (msg.last_updated ? new Date(msg.last_updated).toLocaleString() : "-")}
 
                       <div className="hidden group-hover:flex absolute right-3 top-1/2 -translate-y-1/2 items-center gap-1">

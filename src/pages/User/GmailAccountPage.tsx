@@ -153,7 +153,7 @@ export default function GmailAccountPage() {
                     <th className="w-2/12 px-3 py-2">Email</th>
                     <th className="w-2/12 px-3 py-2">Status</th>
                     <th className="w-2/12 px-3 py-2">Added By</th>
-                    <th className="w-4/12 px-3 py-2">Store</th>
+                    <th className="w-4/12 px-3 py-2">Order Matching Store</th>
                     <th className="w-2/12 px-3 py-2">Actions</th>
                   </tr>
                 </thead>
@@ -180,7 +180,7 @@ export default function GmailAccountPage() {
                             onChange={(e) => handleStoreSelect(account.id, e.target.value)}
                             className="border border-gray-300 rounded px-2 py-1 text-sm"
                           >
-                            <option value="">Select a store</option>
+                            <option value="">All stores</option>
                             {stores.map((store) => (
                               <option key={store.id} value={store.id}>
                                 {store.shop}
@@ -189,7 +189,7 @@ export default function GmailAccountPage() {
                           </select>
                         ) : (
                           <span className="text-gray-700">
-                            {account.store?.shop || "Select a store"}
+                            {account.store?.shop || "All stores"}
                           </span>
                         )}
                       </td>
