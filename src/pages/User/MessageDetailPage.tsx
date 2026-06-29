@@ -21,6 +21,7 @@ import {
   clearCachedOrderInfo,
   getCachedMessageDetail,
   getCachedOrderInfo,
+  queueMessageListPatch,
   setCachedMessageDetail,
   setCachedOrderInfo,
 } from "../../utils/messagePreload";
@@ -321,6 +322,11 @@ const MessageDetailPage = () => {
       const nextMessage = { ...message, status: nextStatus };
       setMessage(nextMessage);
       setCachedMessageDetail(nextMessage);
+      queueMessageListPatch({
+        _id: message._id,
+        status: nextStatus,
+        last_updated: new Date().toISOString(),
+      });
       notify("success", "Ticket status updated");
     } catch (err) {
       console.error("Failed to update ticket status", err);
@@ -354,6 +360,14 @@ const MessageDetailPage = () => {
       setMessage(nextMessage);
       setOrderInfo(null);
       setCachedMessageDetail(nextMessage);
+      queueMessageListPatch({
+        _id: message._id,
+        default_store_id: nextMessage.default_store_id,
+        default_store_shop: nextMessage.default_store_shop,
+        order_info: undefined,
+        order_match_status: "unknown" as any,
+        last_updated: new Date().toISOString(),
+      });
       if (message._id) {
         clearCachedOrderInfo(message._id);
       }

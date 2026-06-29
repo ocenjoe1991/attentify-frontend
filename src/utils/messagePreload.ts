@@ -15,6 +15,8 @@ const messageDetailCache = new Map<string, Cached<Message>>();
 const orderInfoCache = new Map<string, Cached<OrderInfo>>();
 const messageDetailInflight = new Map<string, Promise<Message>>();
 const orderInfoInflight = new Map<string, Promise<OrderInfo>>();
+const MESSAGE_LIST_PATCHES_KEY = "attentify.messageListPatches";
+const MESSAGE_LIST_REFRESH_KEY = "attentify.messageListNeedsRefresh";
 
 function authHeaders() {
   return { Authorization: `Bearer ${localStorage.getItem("token")}` };
@@ -59,6 +61,21 @@ export function setCachedOrderInfo(messageId: string, orderInfo: OrderInfo) {
 export function clearCachedOrderInfo(messageId: string) {
   orderInfoCache.delete(messageId);
   orderInfoInflight.delete(messageId);
+}
+
+export function queueMessageListPatch(message: Partial<Message> & { _id: string }) {
+  try {
+    const existing = JSON.parse(sessionStorage.getItem(MESSAGE_LIST_PATCHES_KEY) || "[]");
+    const patches = Array.isArray(existing) ? existing : [];
+    const nextPatches = [
+      ...patches.filter((patch: Partial<Message> & { _id?: string }) => patch._id !== message._id),
+      message,
+    ];
+    sessionStorage.setItem(MESSAGE_LIST_PATCHES_KEY, JSON.stringify(nextPatches));
+    sessionStorage.setItem(MESSAGE_LIST_REFRESH_KEY, "1");
+  } catch {
+    sessionStorage.setItem(MESSAGE_LIST_REFRESH_KEY, "1");
+  }
 }
 
 export async function fetchMessageDetailCached(messageId: string, options: { force?: boolean } = {}): Promise<Message> {

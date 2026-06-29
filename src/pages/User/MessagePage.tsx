@@ -107,6 +107,8 @@ const getStatusFilterOptions = (mode: ViewMode) => {
 
 const MESSAGE_PREFERENCES_KEY = "attentify.messageListPreferences";
 const MESSAGE_LIST_CACHE_TTL_MS = 5 * 60 * 1000;
+const MESSAGE_LIST_PATCHES_KEY = "attentify.messageListPatches";
+const MESSAGE_LIST_REFRESH_KEY = "attentify.messageListNeedsRefresh";
 
 const defaultMessagePreferences = {
   viewMode: "inbox" as ViewMode,
@@ -158,6 +160,30 @@ type MessageListCache = {
 
 let messageListCache: MessageListCache | null = null;
 
+function applyPendingMessageListPatches() {
+  try {
+    const rawPatches = sessionStorage.getItem(MESSAGE_LIST_PATCHES_KEY);
+    if (!rawPatches || !messageListCache) return;
+    const patches = JSON.parse(rawPatches);
+    if (!Array.isArray(patches) || patches.length === 0) return;
+    const patchMap = new Map<string, Partial<Message>>();
+    patches.forEach((patch) => {
+      if (patch?._id) patchMap.set(patch._id, patch);
+    });
+    messageListCache = {
+      ...messageListCache,
+      messages: messageListCache.messages.map((message) => ({
+        ...message,
+        ...(patchMap.get(message._id) || {}),
+      })),
+      storedAt: Date.now(),
+    };
+    sessionStorage.removeItem(MESSAGE_LIST_PATCHES_KEY);
+  } catch {
+    sessionStorage.removeItem(MESSAGE_LIST_PATCHES_KEY);
+  }
+}
+
 const ownerRoles = ["company_owner", "store_owner"];
 const permanentDeletePermission = "permanent_delete_ticket";
 
@@ -206,6 +232,7 @@ function loadMessagePreferences() {
 
 export default function MessagePage() {
   const savedPreferences = loadMessagePreferences();
+  applyPendingMessageListPatches();
   const cachedParams = messageListCache?.params;
   const [selected, setSelected] = useState<string[]>([]);
   const [viewMode, setViewMode] = useState<ViewMode>(cachedParams?.view_mode || savedPreferences.viewMode);
@@ -365,7 +392,11 @@ export default function MessagePage() {
       sort_order: sortOrder,
     };
 
-    const forceRefresh = options.force || forceRefreshRef.current;
+    const needsRefresh = sessionStorage.getItem(MESSAGE_LIST_REFRESH_KEY) === "1";
+    if (needsRefresh) {
+      sessionStorage.removeItem(MESSAGE_LIST_REFRESH_KEY);
+    }
+    const forceRefresh = options.force || forceRefreshRef.current || needsRefresh;
     forceRefreshRef.current = false;
 
     const cachedList = messageListCache;
