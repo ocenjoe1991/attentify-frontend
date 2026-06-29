@@ -1227,7 +1227,7 @@ export default function MessagePage() {
                       {canUpdateStatus ? (
                         // Clickable status button for allowed roles
                         <button
-                          className={`inline-flex min-w-[132px] items-center justify-between gap-2 border px-3 py-2 text-xs font-semibold shadow-sm transition hover:-translate-y-px hover:shadow focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 ${
+                          className={`inline-flex w-[146px] items-center justify-between gap-2 border px-3 py-2 text-xs font-semibold shadow-sm transition hover:-translate-y-px hover:shadow focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 ${
                             msg.status === "Resolved"
                               ? "border-green-300 bg-green-50 text-green-700 hover:bg-green-100"
                               : "border-yellow-300 bg-yellow-50 text-yellow-800 hover:bg-yellow-100"
@@ -1238,16 +1238,15 @@ export default function MessagePage() {
                           aria-haspopup="menu"
                           aria-expanded={statusMenuId === msg._id}
                         >
-                          <span>{msg.status}</span>
-                          <span className="inline-flex items-center gap-1 border-l border-current/20 pl-2 text-[10px] uppercase tracking-wide opacity-80">
-                            Change
+                          <span className="truncate">{msg.status}</span>
+                          <span className="inline-flex shrink-0 items-center border-l border-current/20 pl-2 opacity-80">
                             <ChevronDownIcon className="h-3.5 w-3.5" />
                           </span>
                         </button>
                       ) : (
                         // Read-only status display for other roles
                         <span
-                          className={`px-3 py-1 text-xs font-semibold rounded inline-block ${
+                          className={`inline-block w-[146px] px-3 py-1 text-xs font-semibold rounded ${
                             msg.status === "Resolved" ? "bg-green-100 text-green-700" : "bg-yellow-100 text-yellow-700"
                           }`}
                         >
@@ -1262,7 +1261,7 @@ export default function MessagePage() {
                           className="absolute z-30 mt-2 w-56 bg-white rounded-md border border-gray-200 shadow-lg"
                         >
                           <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200">
-                            <span className="text-sm font-semibold text-gray-700">Change Status</span>
+                            <span className="text-sm font-semibold text-gray-700">Status</span>
                             <button
                               className="ml-2 text-gray-400 hover:text-gray-600"
                               onClick={() => setStatusMenuId(null)}
