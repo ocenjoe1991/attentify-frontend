@@ -316,6 +316,7 @@ export default function MessagePage() {
     const handleGmailUpdate = (data: { company_id?: string }) => {
       console.log("Gmail update:", data);
       if (currentCompanyId && data.company_id && data.company_id !== currentCompanyId) return;
+      messageListCache = null;
       setSortBy("last_updated");
       setSortOrder("desc");
       setCurrentPage(1);
