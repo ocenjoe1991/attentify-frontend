@@ -49,12 +49,13 @@ const EmailReplySection: React.FC<EmailReplyProps> = ({
       }
       if (isEditorEmpty(reply) && attachments.length === 0) return;
       setSending(true);
+      const replyUrl = `${import.meta.env.VITE_API_URL || ""}/message/${threadId}/reply`;
       try {
         const formData = new FormData();
         formData.append("content", reply || "");
         attachments.forEach((file) => formData.append("files", file));
         await axios.post(
-          `${import.meta.env.VITE_API_URL || ""}/message/${threadId}/reply`,
+          replyUrl,
           formData,
           {
             headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
@@ -72,9 +73,12 @@ const EmailReplySection: React.FC<EmailReplyProps> = ({
       //}
     } catch (err: any) {
       const detail = err?.response?.data?.detail;
-      const message = Array.isArray(detail)
+      const apiMessage = Array.isArray(detail)
         ? detail.map((item) => item?.message || item?.msg || JSON.stringify(item)).join("; ")
         : detail || err?.message || "Failed to send reply.";
+      const message = err?.message === "Network Error"
+        ? `Network Error while calling ${replyUrl}. Check backend URL, CORS origin, and whether the backend is running.`
+        : apiMessage;
       console.error("Failed to send email reply", err);
       notify("error", message);
     } finally {
