@@ -1,6 +1,7 @@
 import React, {useState, useEffect, useRef} from "react";
 import axios from "axios";
 import { Editor } from "primereact/editor";
+import { useNotification } from "../context/NotificationContext";
 
 type EmailReplyProps = {
   threadId?: string;
@@ -13,6 +14,7 @@ const EmailReplySection: React.FC<EmailReplyProps> = ({
   threadId,
   onSent
 }) => {
+  const { notify } = useNotification();
   const [reply, setReply] = useState("");
   const [sending, setSending] = useState(false);
   const [attachments, setAttachments] = useState<File[]>([]);
@@ -41,6 +43,10 @@ const EmailReplySection: React.FC<EmailReplyProps> = ({
 
   // Handle reply submit
     const handleReply = async () => {
+      if (!threadId) {
+        notify("error", "Message thread is missing. Please refresh and try again.");
+        return;
+      }
       if (isEditorEmpty(reply) && attachments.length === 0) return;
       setSending(true);
       try {
@@ -57,14 +63,20 @@ const EmailReplySection: React.FC<EmailReplyProps> = ({
         setReply("");
         setAttachments([]);
         onSent?.();
+        notify("success", "Reply sent.");
         //setMessage(response.data);
   
       //Expand only the last message by default
       //if (response.data?.messages?.length) {
         //setExpandedIndexes([response.data.messages.length - 1]);
       //}
-    } catch (err) {
-      // Handle error
+    } catch (err: any) {
+      const detail = err?.response?.data?.detail;
+      const message = Array.isArray(detail)
+        ? detail.map((item) => item?.message || item?.msg || JSON.stringify(item)).join("; ")
+        : detail || err?.message || "Failed to send reply.";
+      console.error("Failed to send email reply", err);
+      notify("error", message);
     } finally {
       setSending(false);
     }
