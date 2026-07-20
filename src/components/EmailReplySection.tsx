@@ -19,6 +19,7 @@ const EmailReplySection: React.FC<EmailReplyProps> = ({
   const [sending, setSending] = useState(false);
   const [attachments, setAttachments] = useState<File[]>([]);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const requestIdRef = useRef<string>("");
 
   useEffect(() => {
     setReply(replyFromParent);
@@ -34,11 +35,18 @@ const EmailReplySection: React.FC<EmailReplyProps> = ({
     const nextFiles = Array.from(event.target.files || []);
     const allowedFiles = nextFiles.filter((file) => file.size <= 10 * 1024 * 1024);
     setAttachments((current) => [...current, ...allowedFiles]);
+    requestIdRef.current = "";
     event.target.value = "";
   };
 
   const removeAttachment = (index: number) => {
     setAttachments((current) => current.filter((_, currentIndex) => currentIndex !== index));
+    requestIdRef.current = "";
+  };
+
+  const newRequestId = () => {
+    if (crypto?.randomUUID) return crypto.randomUUID();
+    return `${Date.now()}-${Math.random().toString(36).slice(2)}`;
   };
 
   // Handle reply submit
@@ -50,9 +58,13 @@ const EmailReplySection: React.FC<EmailReplyProps> = ({
       if (isEditorEmpty(reply) && attachments.length === 0) return;
       setSending(true);
       const replyUrl = `${import.meta.env.VITE_API_URL || ""}/message/${threadId}/reply`;
+      if (!requestIdRef.current) {
+        requestIdRef.current = newRequestId();
+      }
       try {
         const formData = new FormData();
         formData.append("content", reply || "");
+        formData.append("client_request_id", requestIdRef.current);
         attachments.forEach((file) => formData.append("files", file));
         await axios.post(
           replyUrl,
@@ -63,6 +75,7 @@ const EmailReplySection: React.FC<EmailReplyProps> = ({
         );
         setReply("");
         setAttachments([]);
+        requestIdRef.current = "";
         onSent?.();
         notify("success", "Reply sent.");
         //setMessage(response.data);
@@ -97,7 +110,10 @@ const EmailReplySection: React.FC<EmailReplyProps> = ({
         <div className="compact-reply-editor" data-color-mode="light">
           <Editor
             value={reply}
-            onTextChange={(e: any) => setReply(e.htmlValue)}
+            onTextChange={(e: any) => {
+              setReply(e.htmlValue);
+              requestIdRef.current = "";
+            }}
           />
         </div>
 
