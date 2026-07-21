@@ -60,6 +60,21 @@ const EmailViewer: React.FC<EmailViewerProps> = ({
   //expended,
 }) => {
   const [iframeHeight, setIframeHeight] = React.useState(bodyMaxHeight ? 72 : 600);
+  const [preview, setPreview] = React.useState<{
+    filename: string;
+    mimeType: string;
+    url: string;
+    text?: string;
+    loading: boolean;
+    error?: string;
+  } | null>(null);
+
+  React.useEffect(() => {
+    return () => {
+      if (preview?.url) window.URL.revokeObjectURL(preview.url);
+    };
+  }, [preview?.url]);
+
   const emailDocument = React.useMemo(() => {
     const executableContentRemoved = removeExecutableEmailContent(htmlBody || "");
     const sanitizedHtml = DOMPurify.sanitize(executableContentRemoved, {
@@ -144,6 +159,92 @@ const EmailViewer: React.FC<EmailViewerProps> = ({
     window.URL.revokeObjectURL(url);
   };
 
+  const fetchAttachmentBlob = async (attachment: EmailAttachment) => {
+    if (!messageId || !attachment.gmail_message_id || !attachment.attachment_id) return null;
+
+    const response = await axios.get(
+      `${import.meta.env.VITE_API_URL || ""}/message/${messageId}/attachments/${attachment.gmail_message_id}/${attachment.attachment_id}`,
+      {
+        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+        responseType: "blob",
+      }
+    );
+    return response.data as Blob;
+  };
+
+  const handlePreviewAttachment = async (attachment: EmailAttachment) => {
+    if (!messageId || !attachment.gmail_message_id || !attachment.attachment_id) return;
+    if (preview?.url) window.URL.revokeObjectURL(preview.url);
+
+    const filename = attachment.filename || "Attachment";
+    const mimeType = attachment.mime_type || "application/octet-stream";
+    setPreview({ filename, mimeType, url: "", loading: true });
+
+    try {
+      const blob = await fetchAttachmentBlob(attachment);
+      if (!blob) throw new Error("Attachment is not available.");
+      const url = window.URL.createObjectURL(blob);
+      const nextPreview = { filename, mimeType: blob.type || mimeType, url, loading: false };
+
+      if ((blob.type || mimeType).startsWith("text/") || /json|xml|csv/.test(blob.type || mimeType)) {
+        setPreview({ ...nextPreview, text: await blob.text() });
+      } else {
+        setPreview(nextPreview);
+      }
+    } catch (error) {
+      console.error("Failed to preview attachment:", error);
+      setPreview({
+        filename,
+        mimeType,
+        url: "",
+        loading: false,
+        error: "Preview is unavailable for this attachment.",
+      });
+    }
+  };
+
+  const closePreview = () => {
+    if (preview?.url) window.URL.revokeObjectURL(preview.url);
+    setPreview(null);
+  };
+
+  const previewBody = () => {
+    if (!preview) return null;
+    if (preview.loading) {
+      return <div className="p-6 text-sm text-gray-600">Loading preview...</div>;
+    }
+    if (preview.error) {
+      return <div className="p-6 text-sm text-gray-600">{preview.error}</div>;
+    }
+
+    const mimeType = preview.mimeType;
+    if (mimeType.startsWith("image/")) {
+      return <img src={preview.url} alt={preview.filename} className="max-h-[70vh] max-w-full object-contain" />;
+    }
+    if (mimeType === "application/pdf") {
+      return <iframe title={preview.filename} src={preview.url} className="h-[70vh] w-full border-0" />;
+    }
+    if (mimeType.startsWith("video/")) {
+      return <video src={preview.url} controls className="max-h-[70vh] w-full bg-black" />;
+    }
+    if (mimeType.startsWith("audio/")) {
+      return <audio src={preview.url} controls className="w-full" />;
+    }
+    if (preview.text !== undefined) {
+      return (
+        <pre className="max-h-[70vh] overflow-auto whitespace-pre-wrap bg-gray-50 p-4 text-sm text-gray-800">
+          {preview.text}
+        </pre>
+      );
+    }
+
+    return (
+      <div className="p-6 text-sm text-gray-600">
+        This file type cannot be previewed in the browser. Download it to open locally.
+      </div>
+    );
+  };
+
   return (
     <div className={containerClassName}>
       <header className="flex justify-between items-start mb-4 border-b border-gray-400 pb-4">
@@ -186,19 +287,53 @@ const EmailViewer: React.FC<EmailViewerProps> = ({
             {attachments.map((attachment, index) => {
               const downloadable = Boolean(messageId && attachment.gmail_message_id && attachment.attachment_id);
               return (
-                <button
+                <div
                   key={`${attachment.gmail_message_id || "local"}-${attachment.attachment_id || index}`}
-                  type="button"
-                  onClick={() => handleDownloadAttachment(attachment)}
-                  disabled={!downloadable}
-                  className="border border-gray-300 bg-gray-50 px-3 py-1.5 text-left text-xs text-gray-700 hover:bg-blue-50 disabled:cursor-default disabled:opacity-70"
-                  title={downloadable ? "Download attachment" : "Attachment metadata only"}
+                  className="flex items-center gap-2 border border-gray-300 bg-gray-50 px-3 py-1.5 text-xs text-gray-700"
                 >
                   <span className="font-medium">{attachment.filename || "Attachment"}</span>
                   {attachment.size ? <span className="ml-2 text-gray-500">{formatFileSize(attachment.size)}</span> : null}
-                </button>
+                  <button
+                    type="button"
+                    onClick={() => handlePreviewAttachment(attachment)}
+                    disabled={!downloadable}
+                    className="border border-gray-300 bg-white px-2 py-1 text-xs text-gray-700 hover:bg-blue-50 disabled:cursor-default disabled:opacity-70"
+                    title={downloadable ? "Preview attachment" : "Attachment metadata only"}
+                  >
+                    Preview
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleDownloadAttachment(attachment)}
+                    disabled={!downloadable}
+                    className="border border-gray-300 bg-white px-2 py-1 text-xs text-gray-700 hover:bg-blue-50 disabled:cursor-default disabled:opacity-70"
+                    title={downloadable ? "Download attachment" : "Attachment metadata only"}
+                  >
+                    Download
+                  </button>
+                </div>
               );
             })}
+          </div>
+        </div>
+      )}
+      {preview && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+          <div className="flex max-h-[90vh] w-full max-w-5xl flex-col border border-gray-300 bg-white shadow-xl">
+            <div className="flex items-center justify-between border-b border-gray-200 px-4 py-3">
+              <div className="min-w-0">
+                <div className="truncate text-sm font-semibold text-gray-900">{preview.filename}</div>
+                <div className="text-xs text-gray-500">{preview.mimeType}</div>
+              </div>
+              <button
+                type="button"
+                onClick={closePreview}
+                className="border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50"
+              >
+                Close
+              </button>
+            </div>
+            <div className="flex min-h-48 items-center justify-center overflow-auto p-4">{previewBody()}</div>
           </div>
         </div>
       )}
