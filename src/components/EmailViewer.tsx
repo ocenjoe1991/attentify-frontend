@@ -139,6 +139,19 @@ const EmailViewer: React.FC<EmailViewerProps> = ({
     return `${(size / 1024 / 1024).toFixed(1)} MB`;
   };
 
+  const isTextPreviewType = (mimeType: string) => {
+    const normalized = mimeType.toLowerCase();
+    return (
+      normalized.startsWith("text/") ||
+      normalized === "application/json" ||
+      normalized === "application/xml" ||
+      normalized === "application/csv" ||
+      normalized === "text/csv" ||
+      normalized.endsWith("+json") ||
+      normalized.endsWith("+xml")
+    );
+  };
+
   const handleDownloadAttachment = async (attachment: EmailAttachment) => {
     if (!messageId || !attachment.gmail_message_id || !attachment.attachment_id) return;
 
@@ -186,7 +199,7 @@ const EmailViewer: React.FC<EmailViewerProps> = ({
       const url = window.URL.createObjectURL(blob);
       const nextPreview = { filename, mimeType: blob.type || mimeType, url, loading: false };
 
-      if ((blob.type || mimeType).startsWith("text/") || /json|xml|csv/.test(blob.type || mimeType)) {
+      if (isTextPreviewType(blob.type || mimeType)) {
         setPreview({ ...nextPreview, text: await blob.text() });
       } else {
         setPreview(nextPreview);

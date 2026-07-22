@@ -363,7 +363,7 @@ export default function Governance() {
                         <div className="text-sm font-medium text-gray-800">{item.title}</div>
                         <div className="mt-1 text-sm text-gray-500">{item.message}</div>
                         <div className="mt-2 text-xs text-gray-400">
-                          {item.actor_email || "System"} ·{" "}
+                          {item.actor_email || "System"} -{" "}
                           {item.created_at ? new Date(item.created_at).toLocaleString() : "-"}
                         </div>
                       </div>
