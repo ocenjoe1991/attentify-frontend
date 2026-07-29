@@ -1,6 +1,14 @@
 import React from "react";
 import DOMPurify from "dompurify";
 import axios from "axios";
+import {
+  ArchiveBoxIcon,
+  DocumentIcon,
+  DocumentTextIcon,
+  FilmIcon,
+  MusicalNoteIcon,
+  PhotoIcon,
+} from "@heroicons/react/24/outline";
 import { formatEmailAddress } from "../utils/formatEmailAddress";
 
 type EmailAttachment = {
@@ -39,6 +47,31 @@ const attachmentTypeLabel = (attachment: EmailAttachment) => {
   if (mimeType.startsWith("video/")) return "VIDEO";
   if (mimeType.startsWith("image/")) return "IMAGE";
   return extension || "FILE";
+};
+
+const attachmentIcon = (attachment: EmailAttachment) => {
+  const mimeType = attachment.mime_type?.toLowerCase() || "";
+  const extension = attachment.filename?.split(".").pop()?.toLowerCase() || "";
+
+  if (mimeType.startsWith("image/")) return PhotoIcon;
+  if (mimeType.startsWith("video/")) return FilmIcon;
+  if (mimeType.startsWith("audio/")) return MusicalNoteIcon;
+  if (mimeType === "application/pdf" || extension === "pdf") return DocumentTextIcon;
+  if (["zip", "7z", "rar", "tar", "gz", "bz2"].includes(extension)) return ArchiveBoxIcon;
+  if (["txt", "csv", "json", "xml", "md", "log"].includes(extension) || mimeType.startsWith("text/")) {
+    return DocumentTextIcon;
+  }
+  return DocumentIcon;
+};
+
+const attachmentIconClassName = (attachment: EmailAttachment) => {
+  const extension = attachment.filename?.split(".").pop()?.toLowerCase() || "";
+  if (attachment.mime_type?.toLowerCase() === "application/pdf" || extension === "pdf") return "text-red-600";
+  if (["zip", "7z", "rar", "tar", "gz", "bz2"].includes(extension)) return "text-amber-600";
+  if (["doc", "docx", "odt", "rtf"].includes(extension)) return "text-blue-600";
+  if (["xls", "xlsx", "csv", "ods"].includes(extension)) return "text-emerald-600";
+  if (["ppt", "pptx", "odp"].includes(extension)) return "text-orange-600";
+  return "text-gray-500";
 };
 
 const canCreateThumbnail = (attachment: EmailAttachment) =>
@@ -109,9 +142,11 @@ const AttachmentThumbnail: React.FC<AttachmentThumbnailProps> = ({ attachment, m
     };
   }, [attachment, messageId, shouldLoad]);
 
+  const FileIcon = attachmentIcon(attachment);
   const fallback = (
-    <span className="flex h-full w-full items-center justify-center bg-gray-100 px-2 text-[10px] font-semibold text-gray-500">
-      {attachmentTypeLabel(attachment)}
+    <span className="flex h-full w-full flex-col items-center justify-center gap-1 bg-gray-100 px-2">
+      <FileIcon className={`h-7 w-7 ${attachmentIconClassName(attachment)}`} aria-hidden="true" />
+      <span className="text-[10px] font-semibold text-gray-500">{attachmentTypeLabel(attachment)}</span>
     </span>
   );
 
