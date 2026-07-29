@@ -27,6 +27,112 @@ type EmailViewerProps = {
   OnHandleReply?: () => void;
 };
 
+const attachmentEndpoint = (messageId: string, attachment: EmailAttachment) =>
+  `${import.meta.env.VITE_API_URL || ""}/message/${messageId}/attachments/${attachment.gmail_message_id}/${attachment.attachment_id}`;
+
+const attachmentTypeLabel = (attachment: EmailAttachment) => {
+  const mimeType = attachment.mime_type?.toLowerCase() || "";
+  const extension = attachment.filename?.split(".").pop()?.toUpperCase();
+
+  if (mimeType === "application/pdf") return "PDF";
+  if (mimeType.startsWith("audio/")) return "AUDIO";
+  if (mimeType.startsWith("video/")) return "VIDEO";
+  if (mimeType.startsWith("image/")) return "IMAGE";
+  return extension || "FILE";
+};
+
+const canCreateThumbnail = (attachment: EmailAttachment) =>
+  Boolean(
+    attachment.mime_type?.toLowerCase().startsWith("image/") ||
+      attachment.mime_type?.toLowerCase().startsWith("video/")
+  );
+
+type AttachmentThumbnailProps = {
+  attachment: EmailAttachment;
+  messageId?: string;
+  onPreview: () => void;
+};
+
+const AttachmentThumbnail: React.FC<AttachmentThumbnailProps> = ({ attachment, messageId, onPreview }) => {
+  const targetRef = React.useRef<HTMLButtonElement>(null);
+  const [shouldLoad, setShouldLoad] = React.useState(false);
+  const [url, setUrl] = React.useState("");
+  const [failed, setFailed] = React.useState(false);
+  const mimeType = attachment.mime_type?.toLowerCase() || "";
+  const thumbnailable = Boolean(
+    messageId &&
+      attachment.gmail_message_id &&
+      attachment.attachment_id &&
+      canCreateThumbnail(attachment)
+  );
+
+  React.useEffect(() => {
+    if (!thumbnailable || !targetRef.current) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((entry) => entry.isIntersecting)) {
+          setShouldLoad(true);
+          observer.disconnect();
+        }
+      },
+      { rootMargin: "160px" }
+    );
+    observer.observe(targetRef.current);
+    return () => observer.disconnect();
+  }, [thumbnailable]);
+
+  React.useEffect(() => {
+    if (!shouldLoad || !messageId || !attachment.gmail_message_id || !attachment.attachment_id) return;
+
+    let active = true;
+    let objectUrl = "";
+
+    const loadThumbnail = async () => {
+      try {
+        const response = await axios.get(attachmentEndpoint(messageId, attachment), {
+          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+          responseType: "blob",
+        });
+        objectUrl = window.URL.createObjectURL(response.data);
+        if (active) setUrl(objectUrl);
+      } catch (error) {
+        console.error("Failed to load attachment thumbnail:", error);
+        if (active) setFailed(true);
+      }
+    };
+
+    void loadThumbnail();
+    return () => {
+      active = false;
+      if (objectUrl) window.URL.revokeObjectURL(objectUrl);
+    };
+  }, [attachment, messageId, shouldLoad]);
+
+  const fallback = (
+    <span className="flex h-full w-full items-center justify-center bg-gray-100 px-2 text-[10px] font-semibold text-gray-500">
+      {attachmentTypeLabel(attachment)}
+    </span>
+  );
+
+  return (
+    <button
+      ref={targetRef}
+      type="button"
+      onClick={onPreview}
+      className="h-20 w-24 shrink-0 overflow-hidden border border-gray-200 bg-white text-left hover:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+      title={`Preview ${attachment.filename || "attachment"}`}
+      aria-label={`Preview ${attachment.filename || "attachment"}`}
+    >
+      {!thumbnailable || failed || !url
+        ? fallback
+        : mimeType.startsWith("image/")
+          ? <img src={url} alt="" className="h-full w-full object-cover" />
+          : <video src={url} muted preload="metadata" className="h-full w-full object-cover" />}
+    </button>
+  );
+};
+
 function removeExecutableEmailContent(html: string) {
   const template = document.createElement("template");
   template.innerHTML = html;
@@ -156,7 +262,7 @@ const EmailViewer: React.FC<EmailViewerProps> = ({
     if (!messageId || !attachment.gmail_message_id || !attachment.attachment_id) return;
 
     const response = await axios.get(
-      `${import.meta.env.VITE_API_URL || ""}/message/${messageId}/attachments/${attachment.gmail_message_id}/${attachment.attachment_id}`,
+      attachmentEndpoint(messageId, attachment),
       {
         headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
         responseType: "blob",
@@ -176,7 +282,7 @@ const EmailViewer: React.FC<EmailViewerProps> = ({
     if (!messageId || !attachment.gmail_message_id || !attachment.attachment_id) return null;
 
     const response = await axios.get(
-      `${import.meta.env.VITE_API_URL || ""}/message/${messageId}/attachments/${attachment.gmail_message_id}/${attachment.attachment_id}`,
+      attachmentEndpoint(messageId, attachment),
       {
         headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
         responseType: "blob",
@@ -296,34 +402,50 @@ const EmailViewer: React.FC<EmailViewerProps> = ({
       {attachments.length > 0 && (
         <div className="mt-3 border-t border-gray-200 pt-3">
           <div className="mb-2 text-sm font-semibold text-gray-700">Attachments</div>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-3">
             {attachments.map((attachment, index) => {
               const downloadable = Boolean(messageId && attachment.gmail_message_id && attachment.attachment_id);
               return (
                 <div
                   key={`${attachment.gmail_message_id || "local"}-${attachment.attachment_id || index}`}
-                  className="flex items-center gap-2 border border-gray-300 bg-gray-50 px-3 py-1.5 text-xs text-gray-700"
+                  className="flex w-full max-w-sm gap-3 border border-gray-300 bg-gray-50 p-2 text-xs text-gray-700"
                 >
-                  <span className="font-medium">{attachment.filename || "Attachment"}</span>
-                  {attachment.size ? <span className="ml-2 text-gray-500">{formatFileSize(attachment.size)}</span> : null}
-                  <button
-                    type="button"
-                    onClick={() => handlePreviewAttachment(attachment)}
-                    disabled={!downloadable}
-                    className="border border-gray-300 bg-white px-2 py-1 text-xs text-gray-700 hover:bg-blue-50 disabled:cursor-default disabled:opacity-70"
-                    title={downloadable ? "Preview attachment" : "Attachment metadata only"}
-                  >
-                    Preview
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleDownloadAttachment(attachment)}
-                    disabled={!downloadable}
-                    className="border border-gray-300 bg-white px-2 py-1 text-xs text-gray-700 hover:bg-blue-50 disabled:cursor-default disabled:opacity-70"
-                    title={downloadable ? "Download attachment" : "Attachment metadata only"}
-                  >
-                    Download
-                  </button>
+                  <AttachmentThumbnail
+                    attachment={attachment}
+                    messageId={messageId}
+                    onPreview={() => handlePreviewAttachment(attachment)}
+                  />
+                  <div className="flex min-w-0 flex-1 flex-col justify-between py-0.5">
+                    <div className="min-w-0">
+                      <div className="truncate font-medium text-gray-800" title={attachment.filename || "Attachment"}>
+                        {attachment.filename || "Attachment"}
+                      </div>
+                      <div className="mt-1 text-gray-500">
+                        {attachmentTypeLabel(attachment)}
+                        {attachment.size ? ` - ${formatFileSize(attachment.size)}` : ""}
+                      </div>
+                    </div>
+                    <div className="mt-2 flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => handlePreviewAttachment(attachment)}
+                        disabled={!downloadable}
+                        className="border border-gray-300 bg-white px-2 py-1 text-xs text-gray-700 hover:bg-blue-50 disabled:cursor-default disabled:opacity-70"
+                        title={downloadable ? "Preview attachment" : "Attachment metadata only"}
+                      >
+                        Preview
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleDownloadAttachment(attachment)}
+                        disabled={!downloadable}
+                        className="border border-gray-300 bg-white px-2 py-1 text-xs text-gray-700 hover:bg-blue-50 disabled:cursor-default disabled:opacity-70"
+                        title={downloadable ? "Download attachment" : "Attachment metadata only"}
+                      >
+                        Download
+                      </button>
+                    </div>
+                  </div>
                 </div>
               );
             })}
