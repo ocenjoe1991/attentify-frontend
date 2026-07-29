@@ -7,6 +7,26 @@ import { jwtDecode } from "jwt-decode"
 import { clearAuthStorage } from "../../utils/authStorage";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000/api/v1";
+const REMEMBERED_LOGIN_KEY = "remembered_login";
+
+type RememberedLogin = {
+  email: string;
+  password: string;
+};
+
+const loadRememberedLogin = (): RememberedLogin | null => {
+  try {
+    const stored = localStorage.getItem(REMEMBERED_LOGIN_KEY);
+    if (!stored) return null;
+
+    const parsed = JSON.parse(stored) as RememberedLogin;
+    if (typeof parsed.email !== "string" || typeof parsed.password !== "string") return null;
+    return parsed;
+  } catch {
+    localStorage.removeItem(REMEMBERED_LOGIN_KEY);
+    return null;
+  }
+};
 
 type JwtPayload = {
   sub: string;
@@ -21,12 +41,14 @@ type JwtPayload = {
 };
 
 export default function Login() {
+  const rememberedLogin = React.useMemo(loadRememberedLogin, []);
   const navigate = useNavigate();
   const { setUser } = useUser();
   const { setCompanies, setCurrentCompanyId } = useCompany();
   const [passwordVisible, setPasswordVisible] = useState(false);
-  const [loginEmail, setLoginEmail] = useState("");
-  const [loginPassword, setLoginPassword] = useState("");
+  const [loginEmail, setLoginEmail] = useState(rememberedLogin?.email || "");
+  const [loginPassword, setLoginPassword] = useState(rememberedLogin?.password || "");
+  const [rememberLogin, setRememberLogin] = useState(Boolean(rememberedLogin));
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
@@ -53,6 +75,14 @@ export default function Login() {
       const { token } = data;
 
       if (token) {
+        if (rememberLogin) {
+          localStorage.setItem(
+            REMEMBERED_LOGIN_KEY,
+            JSON.stringify({ email: loginEmail, password: loginPassword })
+          );
+        } else {
+          localStorage.removeItem(REMEMBERED_LOGIN_KEY);
+        }
         localStorage.setItem("token", token);
 
         const decoded = jwtDecode<JwtPayload>(token);
@@ -91,6 +121,11 @@ export default function Login() {
 
   const handleGoogleLogin = () => {
     window.location.assign(`${API_URL}/auth/google/login`);
+  };
+
+  const handleRememberLoginChange = (checked: boolean) => {
+    setRememberLogin(checked);
+    if (!checked) localStorage.removeItem(REMEMBERED_LOGIN_KEY);
   };
 
   return (
@@ -139,6 +174,7 @@ export default function Login() {
               value={loginEmail}
               onChange={(e) => setLoginEmail(e.target.value)}
               required
+              autoComplete="username"
               className="w-full border border-gray-300  px-3 py-2 mb-4 focus:outline-none focus:ring focus:ring-indigo-200"
               placeholder="you@example.com"
             />
@@ -159,11 +195,21 @@ export default function Login() {
               value={loginPassword}
               onChange={(e) => setLoginPassword(e.target.value)}
               required
+              autoComplete="current-password"
               className="w-full border border-gray-300  px-3 py-2 mb-1 focus:outline-none focus:ring focus:ring-indigo-200"
               placeholder="********"
             />
 
-            <div className="mb-4 text-right">
+            <div className="mb-4 flex items-center justify-between">
+              <label className="flex cursor-pointer items-center gap-2 text-sm text-gray-700">
+                <input
+                  type="checkbox"
+                  checked={rememberLogin}
+                  onChange={(event) => handleRememberLoginChange(event.target.checked)}
+                  className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                />
+                Remember login information
+              </label>
               <Link
                 to="/forget-password"
                 className="text-sm text-indigo-600 underline hover:text-indigo-800"
