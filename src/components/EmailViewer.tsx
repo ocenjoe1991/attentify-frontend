@@ -49,6 +49,10 @@ const attachmentTypeLabel = (attachment: EmailAttachment) => {
   return extension || "FILE";
 };
 
+const isPdfAttachment = (attachment: EmailAttachment) =>
+  attachment.mime_type?.toLowerCase() === "application/pdf" ||
+  attachment.filename?.toLowerCase().endsWith(".pdf") === true;
+
 const attachmentIcon = (attachment: EmailAttachment) => {
   const mimeType = attachment.mime_type?.toLowerCase() || "";
   const extension = attachment.filename?.split(".").pop()?.toLowerCase() || "";
@@ -77,8 +81,42 @@ const attachmentIconClassName = (attachment: EmailAttachment) => {
 const canCreateThumbnail = (attachment: EmailAttachment) =>
   Boolean(
     attachment.mime_type?.toLowerCase().startsWith("image/") ||
-      attachment.mime_type?.toLowerCase().startsWith("video/")
+      attachment.mime_type?.toLowerCase().startsWith("video/") ||
+      isPdfAttachment(attachment)
   );
+
+const createPdfThumbnail = async (pdfBlob: Blob): Promise<string> => {
+  const [{ GlobalWorkerOptions, getDocument }, { default: pdfWorker }] = await Promise.all([
+    import("pdfjs-dist/legacy/build/pdf.mjs"),
+    import("pdfjs-dist/legacy/build/pdf.worker.mjs?url"),
+  ]);
+  GlobalWorkerOptions.workerSrc = pdfWorker;
+
+  const loadingTask = getDocument({ data: new Uint8Array(await pdfBlob.arrayBuffer()) });
+  const pdf = await loadingTask.promise;
+
+  try {
+    const page = await pdf.getPage(1);
+    const viewport = page.getViewport({ scale: 0.32 });
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.max(1, Math.round(viewport.width));
+    canvas.height = Math.max(1, Math.round(viewport.height));
+
+    const context = canvas.getContext("2d");
+    if (!context) throw new Error("Unable to create PDF thumbnail canvas.");
+
+    await page.render({ canvas, canvasContext: context, viewport }).promise;
+    const thumbnailBlob = await new Promise<Blob>((resolve, reject) => {
+      canvas.toBlob((blob) => {
+        if (blob) resolve(blob);
+        else reject(new Error("Unable to render PDF thumbnail."));
+      }, "image/png");
+    });
+    return window.URL.createObjectURL(thumbnailBlob);
+  } finally {
+    await pdf.cleanup();
+  }
+};
 
 type AttachmentThumbnailProps = {
   attachment: EmailAttachment;
@@ -127,7 +165,9 @@ const AttachmentThumbnail: React.FC<AttachmentThumbnailProps> = ({ attachment, m
           headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
           responseType: "blob",
         });
-        objectUrl = window.URL.createObjectURL(response.data);
+        objectUrl = isPdfAttachment(attachment)
+          ? await createPdfThumbnail(response.data)
+          : window.URL.createObjectURL(response.data);
         if (active) setUrl(objectUrl);
       } catch (error) {
         console.error("Failed to load attachment thumbnail:", error);
@@ -161,7 +201,7 @@ const AttachmentThumbnail: React.FC<AttachmentThumbnailProps> = ({ attachment, m
     >
       {!thumbnailable || failed || !url
         ? fallback
-        : mimeType.startsWith("image/")
+        : mimeType.startsWith("image/") || isPdfAttachment(attachment)
           ? <img src={url} alt="" className="h-full w-full object-cover" />
           : <video src={url} muted preload="metadata" className="h-full w-full object-cover" />}
     </button>
