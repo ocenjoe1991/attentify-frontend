@@ -53,6 +53,10 @@ const isPdfAttachment = (attachment: EmailAttachment) =>
   attachment.mime_type?.toLowerCase() === "application/pdf" ||
   attachment.filename?.toLowerCase().endsWith(".pdf") === true;
 
+const isTextAttachment = (attachment: EmailAttachment) =>
+  attachment.mime_type?.toLowerCase().startsWith("text/") ||
+  attachment.filename?.toLowerCase().endsWith(".txt") === true;
+
 const attachmentIcon = (attachment: EmailAttachment) => {
   const mimeType = attachment.mime_type?.toLowerCase() || "";
   const extension = attachment.filename?.split(".").pop()?.toLowerCase() || "";
@@ -82,7 +86,8 @@ const canCreateThumbnail = (attachment: EmailAttachment) =>
   Boolean(
     attachment.mime_type?.toLowerCase().startsWith("image/") ||
       attachment.mime_type?.toLowerCase().startsWith("video/") ||
-      isPdfAttachment(attachment)
+      isPdfAttachment(attachment) ||
+      isTextAttachment(attachment)
   );
 
 const createPdfThumbnail = async (pdfBlob: Blob): Promise<string> => {
@@ -116,6 +121,38 @@ const createPdfThumbnail = async (pdfBlob: Blob): Promise<string> => {
   } finally {
     await pdf.cleanup();
   }
+};
+
+const createTextThumbnail = async (textBlob: Blob): Promise<string> => {
+  const canvas = document.createElement("canvas");
+  canvas.width = 240;
+  canvas.height = 160;
+  const context = canvas.getContext("2d");
+  if (!context) throw new Error("Unable to create text thumbnail canvas.");
+
+  context.fillStyle = "#ffffff";
+  context.fillRect(0, 0, canvas.width, canvas.height);
+  context.fillStyle = "#e5e7eb";
+  context.fillRect(0, 0, canvas.width, 26);
+  context.fillStyle = "#6b7280";
+  context.font = "bold 11px Arial, sans-serif";
+  context.fillText("TEXT PREVIEW", 12, 17);
+
+  const lines = (await textBlob.text()).replace(/\r\n/g, "\n").split("\n").slice(0, 6);
+  context.fillStyle = "#374151";
+  context.font = "11px Arial, sans-serif";
+  lines.forEach((line, index) => {
+    const truncated = line.length > 30 ? `${line.slice(0, 29)}...` : line;
+    context.fillText(truncated || " ", 12, 47 + index * 18, 216);
+  });
+
+  const thumbnailBlob = await new Promise<Blob>((resolve, reject) => {
+    canvas.toBlob((blob) => {
+      if (blob) resolve(blob);
+      else reject(new Error("Unable to render text thumbnail."));
+    }, "image/png");
+  });
+  return window.URL.createObjectURL(thumbnailBlob);
 };
 
 type AttachmentThumbnailProps = {
@@ -167,7 +204,9 @@ const AttachmentThumbnail: React.FC<AttachmentThumbnailProps> = ({ attachment, m
         });
         objectUrl = isPdfAttachment(attachment)
           ? await createPdfThumbnail(response.data)
-          : window.URL.createObjectURL(response.data);
+          : isTextAttachment(attachment)
+            ? await createTextThumbnail(response.data)
+            : window.URL.createObjectURL(response.data);
         if (active) setUrl(objectUrl);
       } catch (error) {
         console.error("Failed to load attachment thumbnail:", error);
@@ -201,7 +240,7 @@ const AttachmentThumbnail: React.FC<AttachmentThumbnailProps> = ({ attachment, m
     >
       {!thumbnailable || failed || !url
         ? fallback
-        : mimeType.startsWith("image/") || isPdfAttachment(attachment)
+        : mimeType.startsWith("image/") || isPdfAttachment(attachment) || isTextAttachment(attachment)
           ? <img src={url} alt="" className="h-full w-full object-cover" />
           : <video src={url} muted preload="metadata" className="h-full w-full object-cover" />}
     </button>
