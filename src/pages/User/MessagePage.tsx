@@ -279,6 +279,7 @@ export default function MessagePage() {
   const location = useLocation();
   const menuRef = useRef<HTMLDivElement>(null);
   const listScrollRef = useRef<HTMLDivElement>(null);
+  const [messageTableWidth, setMessageTableWidth] = useState(0);
 
   const [search, setSearch] = useState<string>(cachedParams?.search || "");
   const [currentPage, setCurrentPage] = useState<number>(cachedParams?.page || savedPreferences.currentPage);
@@ -886,13 +887,57 @@ export default function MessagePage() {
     });
   };
 
+  useEffect(() => {
+    const container = listScrollRef.current;
+    if (!container) return;
+
+    const updateWidth = () => setMessageTableWidth(container.clientWidth);
+    updateWidth();
+    const observer = new ResizeObserver(updateWidth);
+    observer.observe(container);
+    return () => observer.disconnect();
+  }, []);
+
   const filteredMembers = members.filter(
     (member) =>
       member.name.toLowerCase().includes(memberSearch.toLowerCase()) ||
       member.email.toLowerCase().includes(memberSearch.toLowerCase())
   );
-  const visibleOptionalColumnCount = Object.values(visibleColumns).filter(Boolean).length;
-  const messageEmptyColSpan = 5 + visibleOptionalColumnCount;
+  const messageColumnLayout = React.useMemo(() => {
+    const width = messageTableWidth || 1280;
+    const titleMinimumWidth = 260;
+    const baseWidth = 48 + 48 + (visibleColumns.lastUpdated ? 110 : 0) + titleMinimumWidth;
+    const showClient = width >= 720;
+    let remainingWidth = Math.max(0, width - baseWidth - (showClient ? 120 : 0));
+
+    const includeColumn = (enabled: boolean, columnWidth: number) => {
+      if (!enabled || remainingWidth < columnWidth) return false;
+      remainingWidth -= columnWidth;
+      return true;
+    };
+
+    return {
+      showClient,
+      showTicket: includeColumn(width >= 820, 90),
+      showStatus: includeColumn(visibleColumns.status, 108),
+      showAssigned: includeColumn(visibleColumns.assigned, 112),
+      showOrder: includeColumn(visibleColumns.order, 82),
+      showStore: includeColumn(visibleColumns.store, 120),
+      showTicketDate: includeColumn(visibleColumns.ticketDate, 98),
+      showLastUpdated: visibleColumns.lastUpdated,
+    };
+  }, [messageTableWidth, visibleColumns]);
+
+  const messageEmptyColSpan =
+    3 +
+    Number(messageColumnLayout.showClient) +
+    Number(messageColumnLayout.showTicket) +
+    Number(messageColumnLayout.showStatus) +
+    Number(messageColumnLayout.showAssigned) +
+    Number(messageColumnLayout.showOrder) +
+    Number(messageColumnLayout.showStore) +
+    Number(messageColumnLayout.showTicketDate) +
+    Number(messageColumnLayout.showLastUpdated);
 
   const viewLabel: string =
     viewMode === "archived"
@@ -1115,12 +1160,25 @@ export default function MessagePage() {
 
         <div
           ref={listScrollRef}
-          className="min-h-0 flex-1 overflow-auto border border-gray-300 bg-white"
+          className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden border border-gray-300 bg-white"
         >
-          <table className="min-w-full divide-y divide-gray-200 text-md">
+          <table className="w-full table-fixed divide-y divide-gray-200 text-sm">
+            <colgroup>
+              <col style={{ width: 48 }} />
+              <col style={{ width: 48 }} />
+              {messageColumnLayout.showClient && <col style={{ width: 120 }} />}
+              {messageColumnLayout.showStore && <col style={{ width: 120 }} />}
+              <col />
+              {messageColumnLayout.showTicket && <col style={{ width: 90 }} />}
+              {messageColumnLayout.showOrder && <col style={{ width: 82 }} />}
+              {messageColumnLayout.showAssigned && <col style={{ width: 112 }} />}
+              {messageColumnLayout.showStatus && <col style={{ width: 108 }} />}
+              {messageColumnLayout.showTicketDate && <col style={{ width: 98 }} />}
+              {messageColumnLayout.showLastUpdated && <col style={{ width: 110 }} />}
+            </colgroup>
             <thead className="sticky top-0 z-20 bg-gray-50 shadow-sm">
               <tr>
-                <th className="px-6 py-3 w-14">
+                <th className="px-2 py-3">
                   <input
                     type="checkbox"
                     checked={
@@ -1132,10 +1190,10 @@ export default function MessagePage() {
                     aria-label="Select all messages"
                   />
                 </th>
-                <th className="w-16 px-3 py-3 text-right text-gray-500">#</th>
-                <th className="px-4 py-3 min-w-[150px] text-left">Client</th>
-                {visibleColumns.store && <th className="px-4 py-3 min-w-[170px] text-left">Store</th>}
-                <th className="px-4 py-3 min-w-[240px] text-left">
+                <th className="px-2 py-3 text-right text-gray-500">#</th>
+                {messageColumnLayout.showClient && <th className="px-2 py-3 text-left">Client</th>}
+                {messageColumnLayout.showStore && <th className="px-2 py-3 text-left">Store</th>}
+                <th className="px-2 py-3 text-left">
                   <button
                     type="button"
                     onClick={() => handleSortHeaderClick("title")}
@@ -1144,7 +1202,7 @@ export default function MessagePage() {
                     Title{sortIndicator("title")}
                   </button>
                 </th>
-                <th className="px-4 py-3 min-w-[120px] text-left">
+                {messageColumnLayout.showTicket && <th className="px-2 py-3 text-left">
                   <button
                     type="button"
                     onClick={() => handleSortHeaderClick("ticket")}
@@ -1152,12 +1210,12 @@ export default function MessagePage() {
                   >
                     Ticket{sortIndicator("ticket")}
                   </button>
-                </th>
-                {visibleColumns.order && <th className="px-4 py-3 min-w-[110px] text-left">Order</th>}
-                {visibleColumns.assigned && <th className="px-4 py-3 min-w-[130px] text-left">Assigned</th>}
-                {visibleColumns.status && <th className="px-4 py-3 min-w-[130px] text-left">Status</th>}
-                {visibleColumns.ticketDate && (
-                  <th className="px-4 py-3 min-w-[170px] text-center">
+                </th>}
+                {messageColumnLayout.showOrder && <th className="px-2 py-3 text-left">Order</th>}
+                {messageColumnLayout.showAssigned && <th className="px-2 py-3 text-left">Assigned</th>}
+                {messageColumnLayout.showStatus && <th className="px-2 py-3 text-left">Status</th>}
+                {messageColumnLayout.showTicketDate && (
+                  <th className="px-2 py-3 text-center">
                     <button
                       type="button"
                       onClick={() => handleSortHeaderClick("started_at")}
@@ -1167,8 +1225,8 @@ export default function MessagePage() {
                     </button>
                   </th>
                 )}
-                {visibleColumns.lastUpdated && (
-                  <th className="px-4 py-3 min-w-[170px] text-center">
+                {messageColumnLayout.showLastUpdated && (
+                  <th className="px-2 py-3 text-center">
                     <button
                       type="button"
                       onClick={() => handleSortHeaderClick("last_updated")}
@@ -1193,7 +1251,7 @@ export default function MessagePage() {
                     key={msg._id}
                     className="group hover:bg-gray-50 transition-all border-b border-gray-100 relative"
                   >
-                    <td className="px-6 py-4 w-14">
+                    <td className="px-2 py-3">
                       <input
                         type="checkbox"
                         checked={selected.includes(msg._id)}
@@ -1202,7 +1260,7 @@ export default function MessagePage() {
                         aria-label={`Select message ${msg.title || msg._id}`}
                       />
                     </td>
-                    <td className="px-3 py-4 text-sm font-medium text-gray-400">
+                    <td className="px-2 py-3 text-xs font-medium text-gray-400">
                       <div className="flex items-center justify-end gap-1.5">
                         {msg.has_attachments && msg.first_attachment ? (
                           <button
@@ -1220,15 +1278,15 @@ export default function MessagePage() {
                         <span>{(currentPage - 1) * pageSize + index + 1}</span>
                       </div>
                     </td>
-                    <td className={`px-4 py-4 font-medium ${msg.is_read_by_current_user ? "text-gray-700" : "text-gray-900 font-semibold"}`}>
-                      {msg.client}
-                    </td>
-                    {visibleColumns.store && <td className="px-4 py-4 text-sm text-gray-600">
+                    {messageColumnLayout.showClient && <td className={`px-2 py-3 font-medium ${msg.is_read_by_current_user ? "text-gray-700" : "text-gray-900 font-semibold"}`}>
+                      <span className="block truncate" title={msg.client}>{msg.client}</span>
+                    </td>}
+                    {messageColumnLayout.showStore && <td className="px-2 py-3 text-xs text-gray-600">
                       {(msg.order_matching_store_ids?.length || 0) > 1 ? (
                         <select
                           value={msg.default_store_id || ""}
                           onChange={(event) => handleMessageStoreSelect(event.target.value, msg)}
-                          className="border border-gray-300 bg-white px-2 py-1 text-sm text-gray-700"
+                          className="max-w-full border border-gray-300 bg-white px-2 py-1 text-xs text-gray-700"
                         >
                           <option value="">Auto / Review</option>
                           {(msg.order_matching_store_ids || []).map((storeId, index) => (
@@ -1241,7 +1299,7 @@ export default function MessagePage() {
                         msg.default_store_shop || msg.order_matching_store_shops?.[0] || "No store set"
                       )}
                     </td>}
-                    <td className="px-4 py-4 text-blue-700 hover:underline">
+                    <td className="px-2 py-3 text-blue-700 hover:underline">
                       <Link
                         to={`/message/${msg._id}`}
                         state={{ scrollY: listScrollRef.current?.scrollTop || 0 }}
@@ -1254,19 +1312,19 @@ export default function MessagePage() {
                         {!msg.is_read_by_current_user && (
                           <span className="h-2 w-2 shrink-0 rounded-full bg-blue-600" aria-label="Unread" />
                         )}
-                        <span className="truncate">{msg.title || "(no subject)"}</span>
+                        <span className="min-w-0 flex-1 truncate">{msg.title || "(no subject)"}</span>
                       </Link>
                     </td>
-                    <td className="px-4 py-4 text-blue-700 hover:underline">
+                    {messageColumnLayout.showTicket && <td className="px-2 py-3 text-blue-700 hover:underline">
                       {msg.ticket?? ""}
-                    </td>
-                    {visibleColumns.order && <td className="px-4 py-4">
+                    </td>}
+                    {messageColumnLayout.showOrder && <td className="px-2 py-3">
                       <span className={`inline-block px-2 py-1 text-xs font-semibold rounded ${orderStatusClass(msg.order_match_status)}`}>
                         {orderStatusLabel(msg.order_match_status)}
                       </span>
                     </td>}
                     {/* Assigned */}
-                    {visibleColumns.assigned && <td className="px-4 py-4">
+                    {messageColumnLayout.showAssigned && <td className="px-2 py-3">
                       {ownerRoles.includes(userRole) ? (
                         <button
                           className="flex items-center gap-2 px-2 py-1 bg-gray-100 hover:bg-blue-50 rounded cursor-pointer"
@@ -1340,11 +1398,11 @@ export default function MessagePage() {
                       )}
                     </td>}
                     {/* Status */}
-                    {visibleColumns.status && <td className="px-4 py-4">
+                    {messageColumnLayout.showStatus && <td className="px-2 py-3">
                       {canUpdateStatus ? (
                         // Clickable status button for allowed roles
                         <button
-                          className={`inline-flex w-[146px] items-center justify-between gap-2 border px-3 py-2 text-xs font-semibold shadow-sm transition hover:-translate-y-px hover:shadow focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 ${
+                          className={`inline-flex w-full items-center justify-between gap-2 border px-2 py-1.5 text-xs font-semibold shadow-sm transition hover:-translate-y-px hover:shadow focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 ${
                             msg.status === "Resolved"
                               ? "border-green-300 bg-green-50 text-green-700 hover:bg-green-100"
                               : "border-yellow-300 bg-yellow-50 text-yellow-800 hover:bg-yellow-100"
@@ -1363,7 +1421,7 @@ export default function MessagePage() {
                       ) : (
                         // Read-only status display for other roles
                         <span
-                          className={`inline-block w-[146px] px-3 py-1 text-xs font-semibold rounded ${
+                          className={`inline-block w-full truncate px-2 py-1 text-xs font-semibold rounded ${
                             msg.status === "Resolved" ? "bg-green-100 text-green-700" : "bg-yellow-100 text-yellow-700"
                           }`}
                         >
@@ -1403,14 +1461,16 @@ export default function MessagePage() {
                         </div>
                       )}
                     </td>}
-                    {visibleColumns.ticketDate && (
-                      <td className="px-4 py-4 text-sm text-gray-500 text-center">
-                        {msg.started_at ? new Date(msg.started_at).toLocaleString() : "-"}
+                    {messageColumnLayout.showTicketDate && (
+                      <td className="px-2 py-3 text-center text-xs text-gray-500">
+                        {msg.started_at ? new Date(msg.started_at).toLocaleDateString() : "-"}
                       </td>
                     )}
-                    {visibleColumns.lastUpdated && (
-                      <td className="px-4 py-4 text-sm text-gray-500 text-center">
-                        {msg.last_updated ? new Date(msg.last_updated).toLocaleString() : "-"}
+                    {messageColumnLayout.showLastUpdated && (
+                      <td className="px-2 py-3 text-center text-xs text-gray-500">
+                        <span title={msg.last_updated ? new Date(msg.last_updated).toLocaleString() : "-"}>
+                          {msg.last_updated ? new Date(msg.last_updated).toLocaleDateString() : "-"}
+                        </span>
 
                         <div className="hidden group-hover:flex absolute right-3 top-1/2 -translate-y-1/2 items-center gap-1">
                           {viewMode === "trashed" && canTrashMessages && (
