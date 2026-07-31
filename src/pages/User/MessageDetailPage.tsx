@@ -166,6 +166,32 @@ const MessageDetailPage = () => {
     };
   }, [currentCompanyId, threadId]);
 
+  useEffect(() => {
+    if (!message || message.is_read_by_current_user) return;
+
+    let active = true;
+    axios
+      .post(
+        `${import.meta.env.VITE_API_URL || ""}/message/${message._id}/read`,
+        null,
+        { headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } }
+      )
+      .then(() => {
+        if (!active) return;
+        const updatedMessage = { ...message, is_read_by_current_user: true };
+        setMessage(updatedMessage);
+        setCachedMessageDetail(updatedMessage);
+        queueMessageListPatch({ _id: updatedMessage._id, is_read_by_current_user: true });
+      })
+      .catch((error) => {
+        console.error("Failed to mark message as read:", error);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [message]);
+
   // Analyze email to get order info
   useEffect(() => {
     const fetchOrderInfo = async () => {

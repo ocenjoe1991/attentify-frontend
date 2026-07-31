@@ -48,6 +48,7 @@ export type Message = {
   default_store_shop?: string;
   order_matching_store_ids?: string[];
   order_matching_store_shops?: string[];
+  is_read_by_current_user?: boolean;
 };
 
 export interface OrderInfo {

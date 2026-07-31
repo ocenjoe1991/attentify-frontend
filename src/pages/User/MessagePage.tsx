@@ -53,6 +53,7 @@ interface Message {
   order_matching_store_shops?: string[];
   has_attachments?: boolean;
   first_attachment?: MessageAttachment;
+  is_read_by_current_user?: boolean;
 }
 
 interface MessageAttachment {
@@ -1219,7 +1220,7 @@ export default function MessagePage() {
                         <span>{(currentPage - 1) * pageSize + index + 1}</span>
                       </div>
                     </td>
-                    <td className="px-4 py-4 font-medium text-gray-700">
+                    <td className={`px-4 py-4 font-medium ${msg.is_read_by_current_user ? "text-gray-700" : "text-gray-900 font-semibold"}`}>
                       {msg.client}
                     </td>
                     {visibleColumns.store && <td className="px-4 py-4 text-sm text-gray-600">
@@ -1248,8 +1249,12 @@ export default function MessagePage() {
                         onFocus={() => prefetchMessage(msg._id)}
                         onMouseDown={() => sessionStorage.setItem("messageListScrollY", String(listScrollRef.current?.scrollTop || 0))}
                         onClick={() => sessionStorage.setItem("messageListScrollY", String(listScrollRef.current?.scrollTop || 0))}
+                        className={`flex items-center gap-2 ${msg.is_read_by_current_user ? "" : "font-semibold"}`}
                       >
-                        {msg.title || "(no subject)"}
+                        {!msg.is_read_by_current_user && (
+                          <span className="h-2 w-2 shrink-0 rounded-full bg-blue-600" aria-label="Unread" />
+                        )}
+                        <span className="truncate">{msg.title || "(no subject)"}</span>
                       </Link>
                     </td>
                     <td className="px-4 py-4 text-blue-700 hover:underline">
