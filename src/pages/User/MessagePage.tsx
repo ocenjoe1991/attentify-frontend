@@ -54,6 +54,7 @@ interface Message {
   has_attachments?: boolean;
   first_attachment?: MessageAttachment;
   is_read_by_current_user?: boolean;
+  latest_message_preview?: string;
 }
 
 interface MessageAttachment {
@@ -1299,7 +1300,7 @@ export default function MessagePage() {
                         msg.default_store_shop || msg.order_matching_store_shops?.[0] || "No store set"
                       )}
                     </td>}
-                    <td className="px-2 py-3 text-blue-700 hover:underline">
+                    <td className="px-2 py-3">
                       <Link
                         to={`/message/${msg._id}`}
                         state={{ scrollY: listScrollRef.current?.scrollTop || 0 }}
@@ -1307,12 +1308,19 @@ export default function MessagePage() {
                         onFocus={() => prefetchMessage(msg._id)}
                         onMouseDown={() => sessionStorage.setItem("messageListScrollY", String(listScrollRef.current?.scrollTop || 0))}
                         onClick={() => sessionStorage.setItem("messageListScrollY", String(listScrollRef.current?.scrollTop || 0))}
-                        className={`flex items-center gap-2 ${msg.is_read_by_current_user ? "" : "font-semibold"}`}
+                        className="block min-w-0"
                       >
-                        {!msg.is_read_by_current_user && (
-                          <span className="h-2 w-2 shrink-0 rounded-full bg-blue-600" aria-label="Unread" />
+                        <span className={`flex items-center gap-2 text-blue-700 hover:underline ${msg.is_read_by_current_user ? "" : "font-semibold"}`}>
+                          {!msg.is_read_by_current_user && (
+                            <span className="h-2 w-2 shrink-0 rounded-full bg-blue-600" aria-label="Unread" />
+                          )}
+                          <span className="min-w-0 flex-1 truncate">{msg.title || "(no subject)"}</span>
+                        </span>
+                        {msg.latest_message_preview && (
+                          <span className="mt-0.5 block truncate text-xs text-gray-500" title={msg.latest_message_preview}>
+                            {msg.latest_message_preview}
+                          </span>
                         )}
-                        <span className="min-w-0 flex-1 truncate">{msg.title || "(no subject)"}</span>
                       </Link>
                     </td>
                     {messageColumnLayout.showTicket && <td className="px-2 py-3 text-blue-700 hover:underline">
