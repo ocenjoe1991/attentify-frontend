@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from "react";
+import { useCallback, useEffect, useState, useRef, type ReactNode } from "react";
 import { Link, useParams } from "react-router-dom";
 import axios from "axios";
 import { ArrowLeftIcon } from "@heroicons/react/24/outline";
@@ -76,6 +76,39 @@ const buildOrderOptions = (orders: any[], mentionedOrderName?: string) => {
 
 const hasSavedOrderResult = (order?: OrderInfo | null) =>
   Boolean(order?.no_orders || (order?.confirmed && order?.shopify_order));
+
+type MessageReadTrackerProps = {
+  gmailMessageId?: string;
+  onViewed: (gmailMessageId: string) => void;
+  children: ReactNode;
+};
+
+const MessageReadTracker = ({ gmailMessageId, onViewed, children }: MessageReadTrackerProps) => {
+  const targetRef = useRef<HTMLDivElement>(null);
+  const reportedRef = useRef(false);
+
+  useEffect(() => {
+    if (!gmailMessageId || !targetRef.current || reportedRef.current) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((entry) => entry.isIntersecting && entry.intersectionRatio >= 0.6)) {
+          reportedRef.current = true;
+          onViewed(gmailMessageId);
+          observer.disconnect();
+        }
+      },
+      { threshold: [0.6] }
+    );
+    observer.observe(targetRef.current);
+    return () => observer.disconnect();
+  }, [gmailMessageId, onViewed]);
+
+  return <div ref={targetRef}>{children}</div>;
+};
+
+const emailAddress = (value?: string) =>
+  (value || "").match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i)?.[0].toLowerCase() || "";
 
 const MessageDetailPage = () => {
   const { threadId } = useParams<{ threadId: string }>();
@@ -166,31 +199,37 @@ const MessageDetailPage = () => {
     };
   }, [currentCompanyId, threadId]);
 
-  useEffect(() => {
-    if (!message || message.is_read_by_current_user) return;
-
-    let active = true;
-    axios
-      .post(
-        `${import.meta.env.VITE_API_URL || ""}/message/${message._id}/read`,
-        null,
+  const markCustomerEmailRead = useCallback(async (messageId: string, gmailMessageId: string) => {
+    try {
+      const response = await axios.post(
+        `${import.meta.env.VITE_API_URL || ""}/message/${messageId}/read`,
+        { gmail_message_id: gmailMessageId },
         { headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } }
-      )
-      .then(() => {
-        if (!active) return;
-        const updatedMessage = { ...message, is_read_by_current_user: true };
-        setMessage(updatedMessage);
-        setCachedMessageDetail(updatedMessage);
-        queueMessageListPatch({ _id: updatedMessage._id, is_read_by_current_user: true });
-      })
-      .catch((error) => {
-        console.error("Failed to mark message as read:", error);
-      });
+      );
+      const readState = response.data as {
+        is_read_by_current_user: boolean;
+        latest_message_preview: string;
+      };
 
-    return () => {
-      active = false;
-    };
-  }, [message]);
+      setMessage((currentMessage) => {
+        if (!currentMessage || currentMessage._id !== messageId) return currentMessage;
+        const updatedMessage = {
+          ...currentMessage,
+          is_read_by_current_user: readState.is_read_by_current_user,
+          latest_message_preview: readState.latest_message_preview,
+        };
+        setCachedMessageDetail(updatedMessage);
+        queueMessageListPatch({
+          _id: messageId,
+          is_read_by_current_user: readState.is_read_by_current_user,
+          latest_message_preview: readState.latest_message_preview,
+        });
+        return updatedMessage;
+      });
+    } catch (error) {
+      console.error("Failed to mark email as read:", error);
+    }
+  }, []);
 
   // Analyze email to get order info
   useEffect(() => {
@@ -493,48 +532,57 @@ const MessageDetailPage = () => {
                   <div className="space-y-2">
                     {message.messages.map((entry, index) => {
                       const isLast = index === message.messages.length - 1;
+                      const gmailMessageId = entry.metadata?.gmail_id as string | undefined;
+                      const isCustomerEmail =
+                        message.channel === "email" &&
+                        Boolean(gmailMessageId) &&
+                        emailAddress(entry.metadata?.from || entry.sender) === emailAddress(message.client);
 
                       return (
-                        <div
-                          key={index}
-                          className={`flex ${
-                            entry.sender === "client" ? "justify-start" : "justify-end"
-                          }`}
+                        <MessageReadTracker
+                          key={`${gmailMessageId || "entry"}-${index}`}
+                          gmailMessageId={isCustomerEmail ? gmailMessageId : undefined}
+                          onViewed={(viewedMessageId) => markCustomerEmailRead(message._id, viewedMessageId)}
                         >
-                          <div className="w-full">
-                            <div className="mb-2">
-                              {entry.message_type === "html" && (
-                                <EmailViewer
-                                  subject={entry.title || "No Subject"}
-                                  from={entry.metadata?.from || "Unknown"}
-                                  to={entry.metadata?.to || "Unknown"}
-                                  date={entry.timestamp}
-                                  htmlBody={entry.content}
-                                  threadId={threadId}
-                                  messageId={message._id}
-                                  attachments={entry.metadata?.attachments || []}
-                                  containerClassName="w-full border border-gray-300 bg-white p-3 mb-3"
-                                  bodyMaxHeight={360}
-                                  //expended={isLast} // <-- only last element expanded
-                                  replyFromParent={reply}
-                                  OnHandleReply={() => {}}
-                                />
-                              )}
+                          <div
+                            className={`flex ${
+                              entry.sender === "client" ? "justify-start" : "justify-end"
+                            }`}
+                          >
+                            <div className="w-full">
+                              <div className="mb-2">
+                                {entry.message_type === "html" && (
+                                  <EmailViewer
+                                    subject={entry.title || "No Subject"}
+                                    from={entry.metadata?.from || "Unknown"}
+                                    to={entry.metadata?.to || "Unknown"}
+                                    date={entry.timestamp}
+                                    htmlBody={entry.content}
+                                    threadId={threadId}
+                                    messageId={message._id}
+                                    attachments={entry.metadata?.attachments || []}
+                                    containerClassName="w-full border border-gray-300 bg-white p-3 mb-3"
+                                    bodyMaxHeight={360}
+                                    replyFromParent={reply}
+                                    OnHandleReply={() => {}}
+                                  />
+                                )}
 
-                              {entry.message_type === "text" && (
-                                <SMSViewer
-                                  from={entry.metadata?.from || "Unknown"}
-                                  to={entry.metadata?.to || "Unknown"}
-                                  date={entry.timestamp}
-                                  body={entry.content}
-                                  isExpanded={isLast} // <-- only last element expanded
-                                  containerClassName="w-full border border-gray-300 bg-white p-4 mb-3"
-                                  bodyMaxHeight={360}
-                                />
-                              )}
+                                {entry.message_type === "text" && (
+                                  <SMSViewer
+                                    from={entry.metadata?.from || "Unknown"}
+                                    to={entry.metadata?.to || "Unknown"}
+                                    date={entry.timestamp}
+                                    body={entry.content}
+                                    isExpanded={isLast}
+                                    containerClassName="w-full border border-gray-300 bg-white p-4 mb-3"
+                                    bodyMaxHeight={360}
+                                  />
+                                )}
+                              </div>
                             </div>
                           </div>
-                        </div>
+                        </MessageReadTracker>
                       );
                     })}
 
