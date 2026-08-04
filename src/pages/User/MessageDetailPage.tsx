@@ -180,6 +180,8 @@ const MessageDetailPage = () => {
       const readState = response.data as {
         is_read_by_current_user: boolean;
         latest_message_preview: string;
+        latest_message_preview_from?: string;
+        latest_message_preview_at?: string;
       };
 
       setMessage((currentMessage) => {
@@ -188,12 +190,16 @@ const MessageDetailPage = () => {
           ...currentMessage,
           is_read_by_current_user: readState.is_read_by_current_user,
           latest_message_preview: readState.latest_message_preview,
+          latest_message_preview_from: readState.latest_message_preview_from,
+          latest_message_preview_at: readState.latest_message_preview_at,
         };
         setCachedMessageDetail(updatedMessage);
         queueMessageListPatch({
           _id: messageId,
           is_read_by_current_user: readState.is_read_by_current_user,
           latest_message_preview: readState.latest_message_preview,
+          latest_message_preview_from: readState.latest_message_preview_from,
+          latest_message_preview_at: readState.latest_message_preview_at,
         });
         return updatedMessage;
       });

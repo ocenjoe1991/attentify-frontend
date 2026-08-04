@@ -50,6 +50,8 @@ export type Message = {
   order_matching_store_shops?: string[];
   is_read_by_current_user?: boolean;
   latest_message_preview?: string;
+  latest_message_preview_from?: string;
+  latest_message_preview_at?: string;
 };
 
 export interface OrderInfo {

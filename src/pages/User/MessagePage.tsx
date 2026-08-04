@@ -55,6 +55,8 @@ interface Message {
   first_attachment?: MessageAttachment;
   is_read_by_current_user?: boolean;
   latest_message_preview?: string;
+  latest_message_preview_from?: string;
+  latest_message_preview_at?: string;
 }
 
 interface MessageAttachment {
@@ -76,6 +78,18 @@ type OrderFilter = "all" | "order" | "other" | "needs_review";
 type SortBy = "title" | "ticket" | "started_at" | "last_updated";
 type SortOrder = "asc" | "desc";
 type MessageOptionalColumn = "store" | "order" | "assigned" | "status" | "ticketDate" | "lastUpdated";
+
+const formatPreviewReceivedAt = (value?: string) => {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  return date.toLocaleString([], {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+};
 
 const modes: [ViewMode, React.ReactNode][] = [
   ["inbox", <InboxIcon className="w-5 h-5" key="inbox" />],
@@ -1316,6 +1330,21 @@ export default function MessagePage() {
                           )}
                           <span className="min-w-0 flex-1 truncate">{msg.title || "(no subject)"}</span>
                         </span>
+                        {(msg.latest_message_preview_from || msg.latest_message_preview_at) && (
+                          <span className="mt-0.5 flex min-w-0 items-center gap-1 truncate text-xs text-gray-500">
+                            {msg.latest_message_preview_from && (
+                              <span className="truncate" title={msg.latest_message_preview_from}>
+                                From {msg.latest_message_preview_from}
+                              </span>
+                            )}
+                            {msg.latest_message_preview_from && msg.latest_message_preview_at && <span>|</span>}
+                            {msg.latest_message_preview_at && (
+                              <span className="shrink-0" title={new Date(msg.latest_message_preview_at).toLocaleString()}>
+                                {formatPreviewReceivedAt(msg.latest_message_preview_at)}
+                              </span>
+                            )}
+                          </span>
+                        )}
                         {msg.latest_message_preview && (
                           <span className="mt-0.5 block truncate text-xs text-gray-500" title={msg.latest_message_preview}>
                             {msg.latest_message_preview}
