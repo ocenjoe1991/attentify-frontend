@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, useRef, type ReactNode } from "react";
+import { useCallback, useEffect, useState, useRef } from "react";
 import { Link, useParams } from "react-router-dom";
 import axios from "axios";
 import { ArrowLeftIcon } from "@heroicons/react/24/outline";
@@ -77,36 +77,6 @@ const buildOrderOptions = (orders: any[], mentionedOrderName?: string) => {
 const hasSavedOrderResult = (order?: OrderInfo | null) =>
   Boolean(order?.no_orders || (order?.confirmed && order?.shopify_order));
 
-type MessageReadTrackerProps = {
-  gmailMessageId?: string;
-  onViewed: (gmailMessageId: string) => void;
-  children: ReactNode;
-};
-
-const MessageReadTracker = ({ gmailMessageId, onViewed, children }: MessageReadTrackerProps) => {
-  const targetRef = useRef<HTMLDivElement>(null);
-  const reportedRef = useRef(false);
-
-  useEffect(() => {
-    if (!gmailMessageId || !targetRef.current || reportedRef.current) return;
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries.some((entry) => entry.isIntersecting && entry.intersectionRatio >= 0.6)) {
-          reportedRef.current = true;
-          onViewed(gmailMessageId);
-          observer.disconnect();
-        }
-      },
-      { threshold: [0.6] }
-    );
-    observer.observe(targetRef.current);
-    return () => observer.disconnect();
-  }, [gmailMessageId, onViewed]);
-
-  return <div ref={targetRef}>{children}</div>;
-};
-
 const emailAddress = (value?: string) =>
   (value || "").match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i)?.[0].toLowerCase() || "";
 
@@ -128,6 +98,7 @@ const MessageDetailPage = () => {
 
   const hasFetchedMessage = useRef(false);
   const hasFetchedOrder = useRef(false);
+  const lastMarkedReadCursor = useRef<Record<string, string>>({});
   const { setTitle } = usePageTitle();
   const { currentCompanyId } = useCompany();
 
@@ -230,6 +201,25 @@ const MessageDetailPage = () => {
       console.error("Failed to mark email as read:", error);
     }
   }, []);
+
+  useEffect(() => {
+    if (!message || message.channel !== "email") return;
+
+    const customerEmails = message.messages.filter((entry) => {
+      const gmailMessageId = entry.metadata?.gmail_id as string | undefined;
+      return Boolean(gmailMessageId) &&
+        emailAddress(entry.metadata?.from || entry.sender) === emailAddress(message.client);
+    });
+    const latestCustomerEmail = customerEmails.reduce<typeof customerEmails[number] | null>((latest, entry) => {
+      if (!latest) return entry;
+      return new Date(entry.timestamp).getTime() > new Date(latest.timestamp).getTime() ? entry : latest;
+    }, null);
+    const gmailMessageId = latestCustomerEmail?.metadata?.gmail_id as string | undefined;
+    if (!gmailMessageId || lastMarkedReadCursor.current[message._id] === gmailMessageId) return;
+
+    lastMarkedReadCursor.current[message._id] = gmailMessageId;
+    void markCustomerEmailRead(message._id, gmailMessageId);
+  }, [markCustomerEmailRead, message]);
 
   // Analyze email to get order info
   useEffect(() => {
@@ -532,25 +522,15 @@ const MessageDetailPage = () => {
                   <div className="space-y-2">
                     {message.messages.map((entry, index) => {
                       const isLast = index === message.messages.length - 1;
-                      const gmailMessageId = entry.metadata?.gmail_id as string | undefined;
-                      const isCustomerEmail =
-                        message.channel === "email" &&
-                        Boolean(gmailMessageId) &&
-                        emailAddress(entry.metadata?.from || entry.sender) === emailAddress(message.client);
-
                       return (
-                        <MessageReadTracker
-                          key={`${gmailMessageId || "entry"}-${index}`}
-                          gmailMessageId={isCustomerEmail ? gmailMessageId : undefined}
-                          onViewed={(viewedMessageId) => markCustomerEmailRead(message._id, viewedMessageId)}
+                        <div
+                          key={`${entry.metadata?.gmail_id || "entry"}-${index}`}
+                          className={`flex ${
+                            entry.sender === "client" ? "justify-start" : "justify-end"
+                          }`}
                         >
-                          <div
-                            className={`flex ${
-                              entry.sender === "client" ? "justify-start" : "justify-end"
-                            }`}
-                          >
-                            <div className="w-full">
-                              <div className="mb-2">
+                          <div className="w-full">
+                            <div className="mb-2">
                                 {entry.message_type === "html" && (
                                   <EmailViewer
                                     subject={entry.title || "No Subject"}
@@ -579,10 +559,9 @@ const MessageDetailPage = () => {
                                     bodyMaxHeight={360}
                                   />
                                 )}
-                              </div>
                             </div>
                           </div>
-                        </MessageReadTracker>
+                        </div>
                       );
                     })}
 
