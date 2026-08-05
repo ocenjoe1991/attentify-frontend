@@ -267,6 +267,31 @@ function removeExecutableEmailContent(html: string) {
   return template.innerHTML;
 }
 
+function collapseQuotedEmailContent(html: string) {
+  const template = document.createElement("template");
+  template.innerHTML = html;
+
+  const quoteNodes = Array.from(template.content.querySelectorAll("blockquote, .gmail_quote"));
+  const outerQuotes = quoteNodes.filter(
+    (node) => !quoteNodes.some((otherNode) => otherNode !== node && otherNode.contains(node))
+  );
+
+  outerQuotes.forEach((quote) => {
+    const details = document.createElement("details");
+    details.className = "email-quoted-content";
+
+    const summary = document.createElement("summary");
+    summary.setAttribute("aria-label", "Show quoted text");
+    summary.setAttribute("title", "Show quoted text");
+    summary.textContent = "...";
+
+    quote.parentNode?.replaceChild(details, quote);
+    details.append(summary, quote);
+  });
+
+  return template.innerHTML;
+}
+
 const EmailViewer: React.FC<EmailViewerProps> = ({
   subject,
   from,
@@ -280,6 +305,7 @@ const EmailViewer: React.FC<EmailViewerProps> = ({
   //expended,
 }) => {
   const [iframeHeight, setIframeHeight] = React.useState(bodyMaxHeight ? 72 : 600);
+  const iframeRef = React.useRef<HTMLIFrameElement>(null);
   const [preview, setPreview] = React.useState<{
     filename: string;
     mimeType: string;
@@ -297,7 +323,8 @@ const EmailViewer: React.FC<EmailViewerProps> = ({
 
   const emailDocument = React.useMemo(() => {
     const executableContentRemoved = removeExecutableEmailContent(htmlBody || "");
-    const sanitizedHtml = DOMPurify.sanitize(executableContentRemoved, {
+    const quotedContentCollapsed = collapseQuotedEmailContent(executableContentRemoved);
+    const sanitizedHtml = DOMPurify.sanitize(quotedContentCollapsed, {
       USE_PROFILES: { html: true },
       FORBID_TAGS: ["script", "iframe", "object", "embed"],
     });
@@ -328,6 +355,30 @@ const EmailViewer: React.FC<EmailViewerProps> = ({
       table {
         max-width: 100%;
       }
+      details.email-quoted-content {
+        margin-top: 14px;
+      }
+      details.email-quoted-content > summary {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 24px;
+        height: 14px;
+        cursor: pointer;
+        border-radius: 7px;
+        background: #d1d5db;
+        color: #4b5563;
+        font-size: 12px;
+        font-weight: 700;
+        line-height: 1;
+        list-style: none;
+      }
+      details.email-quoted-content > summary::-webkit-details-marker {
+        display: none;
+      }
+      details.email-quoted-content[open] > summary {
+        margin-bottom: 12px;
+      }
     </style>
   </head>
   <body>${sanitizedHtml}</body>
@@ -339,14 +390,22 @@ const EmailViewer: React.FC<EmailViewerProps> = ({
 
   const handleIframeLoad = (event: React.SyntheticEvent<HTMLIFrameElement>) => {
     try {
-      const doc = event.currentTarget.contentDocument;
-      const minHeight = bodyMaxHeight ? 72 : 240;
-      const maxHeight = bodyMaxHeight || 4000;
-      const nextHeight = Math.max(
-        minHeight,
-        doc?.documentElement.scrollHeight || doc?.body.scrollHeight || 600
-      );
-      setIframeHeight(Math.min(nextHeight, maxHeight));
+      const iframe = event.currentTarget;
+      const resizeIframe = () => {
+        const doc = iframe.contentDocument;
+        const minHeight = bodyMaxHeight ? 72 : 240;
+        const maxHeight = bodyMaxHeight || 4000;
+        const nextHeight = Math.max(
+          minHeight,
+          doc?.documentElement.scrollHeight || doc?.body.scrollHeight || 600
+        );
+        setIframeHeight(Math.min(nextHeight, maxHeight));
+      };
+
+      resizeIframe();
+      iframe.contentDocument
+        ?.querySelectorAll("details.email-quoted-content")
+        .forEach((details) => details.addEventListener("toggle", resizeIframe));
     } catch {
       setIframeHeight(bodyMaxHeight ? 72 : 600);
     }
@@ -505,6 +564,7 @@ const EmailViewer: React.FC<EmailViewerProps> = ({
         style={bodyMaxHeight ? { maxHeight: bodyMaxHeight, overflowY: "auto" } : undefined}
       >
         <iframe
+          ref={iframeRef}
           title={`Email body: ${subject}`}
           className="w-full border-0 bg-white"
           srcDoc={emailDocument}
