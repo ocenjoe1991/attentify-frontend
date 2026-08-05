@@ -1294,7 +1294,9 @@ export default function MessagePage() {
                       </div>
                     </td>
                     {messageColumnLayout.showClient && <td className={`px-2 py-3 font-medium ${msg.is_read_by_current_user ? "text-gray-700" : "text-gray-900 font-semibold"}`}>
-                      <span className="block truncate" title={msg.client}>{msg.client}</span>
+                      <span className="block truncate" title={msg.latest_message_preview_from || msg.client}>
+                        {msg.latest_message_preview_from || msg.client}
+                      </span>
                     </td>}
                     {messageColumnLayout.showStore && <td className="px-2 py-3 text-xs text-gray-600">
                       {(msg.order_matching_store_ids?.length || 0) > 1 ? (
@@ -1324,32 +1326,25 @@ export default function MessagePage() {
                         onClick={() => sessionStorage.setItem("messageListScrollY", String(listScrollRef.current?.scrollTop || 0))}
                         className="block min-w-0"
                       >
-                        <span className={`flex items-center gap-2 text-blue-700 hover:underline ${msg.is_read_by_current_user ? "" : "font-semibold"}`}>
+                        <span className={`flex min-w-0 items-center gap-2 text-blue-700 hover:underline ${msg.is_read_by_current_user ? "" : "font-semibold"}`}>
                           {!msg.is_read_by_current_user && (
                             <span className="h-2 w-2 shrink-0 rounded-full bg-blue-600" aria-label="Unread" />
                           )}
-                          <span className="min-w-0 flex-1 truncate">{msg.title || "(no subject)"}</span>
+                          <span className="min-w-0 flex-1 truncate text-gray-700">
+                            <span className="text-blue-700">{msg.title || "(no subject)"}</span>
+                            {msg.latest_message_preview && (
+                              <span className="font-normal text-gray-500"> - {msg.latest_message_preview}</span>
+                            )}
+                          </span>
+                          {msg.latest_message_preview_at && (
+                            <span
+                              className="shrink-0 text-xs font-normal text-gray-500"
+                              title={new Date(msg.latest_message_preview_at).toLocaleString()}
+                            >
+                              {formatPreviewReceivedAt(msg.latest_message_preview_at)}
+                            </span>
+                          )}
                         </span>
-                        {(msg.latest_message_preview_from || msg.latest_message_preview_at) && (
-                          <span className="mt-0.5 flex min-w-0 items-center gap-1 truncate text-xs text-gray-500">
-                            {msg.latest_message_preview_from && (
-                              <span className="truncate" title={msg.latest_message_preview_from}>
-                                From {msg.latest_message_preview_from}
-                              </span>
-                            )}
-                            {msg.latest_message_preview_from && msg.latest_message_preview_at && <span>|</span>}
-                            {msg.latest_message_preview_at && (
-                              <span className="shrink-0" title={new Date(msg.latest_message_preview_at).toLocaleString()}>
-                                {formatPreviewReceivedAt(msg.latest_message_preview_at)}
-                              </span>
-                            )}
-                          </span>
-                        )}
-                        {msg.latest_message_preview && (
-                          <span className="mt-0.5 block truncate text-xs text-gray-500" title={msg.latest_message_preview}>
-                            {msg.latest_message_preview}
-                          </span>
-                        )}
                       </Link>
                     </td>
                     {messageColumnLayout.showTicket && <td className="px-2 py-3 text-blue-700 hover:underline">
