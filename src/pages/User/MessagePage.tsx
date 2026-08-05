@@ -1294,9 +1294,7 @@ export default function MessagePage() {
                       </div>
                     </td>
                     {messageColumnLayout.showClient && <td className={`px-2 py-3 font-medium ${msg.is_read_by_current_user ? "text-gray-700" : "text-gray-900 font-semibold"}`}>
-                      <span className="block truncate" title={msg.latest_message_preview_from || msg.client}>
-                        {msg.latest_message_preview_from || msg.client}
-                      </span>
+                      <span className="block truncate" title={msg.client}>{msg.client}</span>
                     </td>}
                     {messageColumnLayout.showStore && <td className="px-2 py-3 text-xs text-gray-600">
                       {(msg.order_matching_store_ids?.length || 0) > 1 ? (
