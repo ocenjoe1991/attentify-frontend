@@ -304,7 +304,9 @@ const EmailViewer: React.FC<EmailViewerProps> = ({
   attachments = [],
   //expended,
 }) => {
-  const [iframeHeight, setIframeHeight] = React.useState(bodyMaxHeight ? 72 : 600);
+  // Reserve the available body space immediately so a slow iframe load does
+  // not make every message card grow from a tiny placeholder.
+  const [iframeHeight, setIframeHeight] = React.useState(bodyMaxHeight || 600);
   const iframeRef = React.useRef<HTMLIFrameElement>(null);
   const [preview, setPreview] = React.useState<{
     filename: string;
@@ -393,7 +395,7 @@ const EmailViewer: React.FC<EmailViewerProps> = ({
       const iframe = event.currentTarget;
       const resizeIframe = () => {
         const doc = iframe.contentDocument;
-        const minHeight = bodyMaxHeight ? 72 : 240;
+        const minHeight = bodyMaxHeight ? 120 : 240;
         const maxHeight = bodyMaxHeight || 4000;
         const nextHeight = Math.max(
           minHeight,
@@ -407,7 +409,7 @@ const EmailViewer: React.FC<EmailViewerProps> = ({
         ?.querySelectorAll("details.email-quoted-content")
         .forEach((details) => details.addEventListener("toggle", resizeIframe));
     } catch {
-      setIframeHeight(bodyMaxHeight ? 72 : 600);
+      setIframeHeight(bodyMaxHeight || 600);
     }
   };
 
