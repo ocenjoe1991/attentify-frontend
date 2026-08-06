@@ -383,7 +383,7 @@ const EmailViewer: React.FC<EmailViewerProps> = ({
       }
     </style>
   </head>
-  <body>${sanitizedHtml}</body>
+  <body><div id="email-content">${sanitizedHtml}</div></body>
 </html>`;
   }, [htmlBody]);
   //const [isExpanded, setIsExpanded] = useState(expended);
@@ -395,11 +395,12 @@ const EmailViewer: React.FC<EmailViewerProps> = ({
       const iframe = event.currentTarget;
       const resizeIframe = () => {
         const doc = iframe.contentDocument;
-        const minHeight = bodyMaxHeight ? 120 : 240;
+        const minHeight = bodyMaxHeight ? 72 : 240;
         const maxHeight = bodyMaxHeight || 4000;
+        const content = doc?.getElementById("email-content");
         const nextHeight = Math.max(
           minHeight,
-          doc?.documentElement.scrollHeight || doc?.body.scrollHeight || 600
+          content?.scrollHeight || doc?.documentElement.scrollHeight || doc?.body.scrollHeight || 600
         );
         setIframeHeight(Math.min(nextHeight, maxHeight));
       };
