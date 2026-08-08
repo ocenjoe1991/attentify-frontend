@@ -314,6 +314,7 @@ export default function MessagePage() {
   const [customPermissions, setCustomPermissions] = useState<string[]>([]);
   const statusFilterOptions = getStatusFilterOptions(viewMode);
   const userRole = user?.role || "agent";
+  const isAgent = userRole === "agent";
   const canMoveMessages = ownerRoles.includes(userRole);
   const canUpdateStatus = userRole !== "readonly";
   const canPermanentlyDeleteMessages = customPermissions.includes(permanentDeletePermission);
@@ -322,6 +323,13 @@ export default function MessagePage() {
     statusFilter === "all" || statusFilterOptions.includes(statusFilter)
       ? statusFilter
       : "all";
+
+  useEffect(() => {
+    if (isAgent && assignedFilter !== "assigned") {
+      setAssignedFilter("assigned");
+      setCurrentPage(1);
+    }
+  }, [assignedFilter, isAgent]);
 
   useEffect(() => {
     const socket = initSocket();
@@ -1027,15 +1035,23 @@ export default function MessagePage() {
             Assignment
             <select
               value={assignedFilter}
+              disabled={isAgent}
               onChange={(e) => {
                 setAssignedFilter(e.target.value as AssignedFilter);
                 setCurrentPage(1);
               }}
-              className="border border-gray-300 px-3 py-1.5 text-sm font-normal text-gray-700"
+              className="border border-gray-300 px-3 py-1.5 text-sm font-normal text-gray-700 disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-500"
+              title={isAgent ? "Agents can view only their assigned tickets" : undefined}
             >
-              <option value="all">All tickets</option>
-              <option value="assigned">Assigned</option>
-              <option value="unassigned">Unassigned</option>
+              {isAgent ? (
+                <option value="assigned">My assigned tickets</option>
+              ) : (
+                <>
+                  <option value="all">All tickets</option>
+                  <option value="assigned">Assigned</option>
+                  <option value="unassigned">Unassigned</option>
+                </>
+              )}
             </select>
           </label>
 
