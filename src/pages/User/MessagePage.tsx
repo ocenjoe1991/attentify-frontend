@@ -988,7 +988,7 @@ export default function MessagePage() {
 
   return (
     <Layout>
-      <div className="flex h-[calc(100vh-4rem)] flex-col overflow-hidden p-3">
+      <div className="message-page flex h-[calc(100vh-4rem)] flex-col overflow-hidden p-3">
         <div className="mb-2 flex shrink-0 flex-wrap items-center justify-between gap-3">
           <div className="flex gap-6">
             {modes.map(([mode, icon]) => (
@@ -1119,7 +1119,7 @@ export default function MessagePage() {
           </label>
         </div>
 
-        <div className="mb-3 flex min-h-[42px] shrink-0 flex-wrap items-center justify-between gap-2 border border-gray-200 bg-gray-50 px-3 py-2 text-sm">
+        <div className="message-bulk-toolbar mb-3 flex min-h-[42px] shrink-0 flex-wrap items-center justify-between gap-2 border border-gray-200 bg-gray-50 px-3 py-2 text-sm">
           <span className="font-medium text-gray-700">
             {selected.length > 0
               ? `${selected.length} selected`
@@ -1455,7 +1455,7 @@ export default function MessagePage() {
                       {canUpdateStatus ? (
                         // Clickable status button for allowed roles
                         <button
-                          className={`inline-flex w-full items-center justify-between gap-2 border px-2 py-1.5 text-xs font-semibold shadow-sm transition hover:-translate-y-px hover:shadow focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 ${
+                          className={`message-status-control inline-flex w-full items-center justify-between gap-2 border px-2 py-1.5 text-xs font-semibold shadow-sm transition hover:-translate-y-px hover:shadow focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 ${
                             msg.status === "Resolved"
                               ? "border-green-300 bg-green-50 text-green-700 hover:bg-green-100"
                               : "border-yellow-300 bg-yellow-50 text-yellow-800 hover:bg-yellow-100"
