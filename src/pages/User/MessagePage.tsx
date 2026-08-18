@@ -1,4 +1,5 @@
 import React, { useEffect, useLayoutEffect, useRef, useState, type ChangeEvent } from "react";
+import { createPortal } from "react-dom";
 import { Link, useLocation } from "react-router-dom";
 import Layout from "../../layouts/Layout";
 import {
@@ -57,6 +58,11 @@ interface Message {
   latest_message_preview?: string;
   latest_message_preview_from?: string;
   latest_message_preview_at?: string;
+}
+
+interface StatusMenuPosition {
+  top: number;
+  left: number;
 }
 
 interface MessageAttachment {
@@ -284,6 +290,7 @@ export default function MessagePage() {
   // Track menu state for assign and status per message
   const [assignMenuId, setAssignMenuId] = useState<string | null>(null);
   const [statusMenuId, setStatusMenuId] = useState<string | null>(null);
+  const [statusMenuPosition, setStatusMenuPosition] = useState<StatusMenuPosition | null>(null);
   const [memberSearch, setMemberSearch] = useState<string>("");
   const [members, setMembers] = useState<Member[]>([]);
   const { currentCompanyId } = useCompany();
@@ -574,6 +581,7 @@ export default function MessagePage() {
       ) {
         setAssignMenuId(null);
         setStatusMenuId(null);
+        setStatusMenuPosition(null);
       }
     }
     if (assignMenuId || statusMenuId) {
@@ -685,11 +693,25 @@ export default function MessagePage() {
   const handleAssignMenuOpen = (id: string) => {
     setAssignMenuId(id === assignMenuId ? null : id);
     setStatusMenuId(null);
+    setStatusMenuPosition(null);
     setMemberSearch("");
   };
 
-  const handleStatusMenuOpen = (id: string) => {
-    setStatusMenuId(id === statusMenuId ? null : id);
+  const handleStatusMenuOpen = (id: string, trigger: HTMLButtonElement) => {
+    if (id === statusMenuId) {
+      setStatusMenuId(null);
+      setStatusMenuPosition(null);
+      return;
+    }
+
+    const menuWidth = 224;
+    const estimatedMenuHeight = 56 + statusList.length * 38;
+    const rect = trigger.getBoundingClientRect();
+    setStatusMenuPosition({
+      left: Math.max(8, rect.left - menuWidth - 8),
+      top: Math.min(Math.max(8, rect.top), window.innerHeight - estimatedMenuHeight - 8),
+    });
+    setStatusMenuId(id);
     setAssignMenuId(null);
   };
 
@@ -715,6 +737,7 @@ export default function MessagePage() {
 
   const handleStatusSelect = async (status: string, msg: Message) => {
     setStatusMenuId(null);
+    setStatusMenuPosition(null);
 
     try {
       await axios.patch(
@@ -975,6 +998,7 @@ export default function MessagePage() {
       : viewMode === "trashed"
         ? "Trash"
         : "Inbox";
+  const activeStatusMessage = messages.find((message) => message._id === statusMenuId);
 
   // Utility to get member circle
   const AssignedCircle = ({ user }: { user: Member }) => (
@@ -1452,7 +1476,6 @@ export default function MessagePage() {
                     </td>}
                     {/* Status */}
                     {messageColumnLayout.showStatus && <td className="px-2 py-3">
-                      <div className="relative">
                         {canUpdateStatus ? (
                         // Clickable status button for allowed roles
                         <button
@@ -1461,7 +1484,7 @@ export default function MessagePage() {
                               ? "border-green-300 bg-green-50 text-green-700 hover:bg-green-100"
                               : "border-yellow-300 bg-yellow-50 text-yellow-800 hover:bg-yellow-100"
                           }`}
-                          onClick={() => handleStatusMenuOpen(msg._id)}
+                          onClick={(event) => handleStatusMenuOpen(msg._id, event.currentTarget)}
                           onMouseDown={(event) => event.stopPropagation()}
                           type="button"
                           title="Change status"
@@ -1483,39 +1506,6 @@ export default function MessagePage() {
                           {msg.status}
                         </span>
                         )}
-
-                        {/* Status Menu */}
-                        {statusMenuId === msg._id && (
-                          <div
-                            ref={menuRef}
-                            className="absolute right-full top-0 z-30 mr-2 w-56 origin-top-right bg-white rounded-md border border-gray-200 shadow-lg"
-                          >
-                            <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200">
-                              <span className="text-sm font-semibold text-gray-700">Status</span>
-                              <button
-                                className="ml-2 text-gray-400 hover:text-gray-600"
-                                onClick={() => setStatusMenuId(null)}
-                                aria-label="Close"
-                              >
-                                <XMarkIcon className="h-5 w-5" />
-                              </button>
-                            </div>
-                            <div>
-                              {statusList.map((status) => (
-                                <button
-                                  key={status}
-                                  className={`block w-full px-4 py-2 text-left text-sm hover:bg-blue-50 ${
-                                    status === msg.status ? "bg-blue-50 font-semibold text-blue-700" : "text-gray-700"
-                                  }`}
-                                  onClick={() => handleStatusSelect(status, msg)}
-                                >
-                                  {status}
-                                </button>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-                      </div>
                     </td>}
                     {messageColumnLayout.showTicketDate && (
                       <td className="px-2 py-3 text-center text-xs text-gray-500">
@@ -1605,6 +1595,44 @@ export default function MessagePage() {
               </div>
             </div>
       </div>
+      {statusMenuId && statusMenuPosition && activeStatusMessage && createPortal(
+        <div
+          ref={menuRef}
+          className="message-status-popover fixed z-[70] w-56 origin-top-right rounded-md border border-gray-200 bg-white shadow-lg"
+          style={{ left: statusMenuPosition.left, top: statusMenuPosition.top }}
+          role="menu"
+          aria-label="Change message status"
+        >
+          <div className="flex items-center justify-between border-b border-gray-200 px-3 py-2">
+            <span className="text-sm font-semibold text-gray-700">Status</span>
+            <button
+              className="ml-2 text-gray-400 hover:text-gray-600"
+              onClick={() => {
+                setStatusMenuId(null);
+                setStatusMenuPosition(null);
+              }}
+              aria-label="Close"
+            >
+              <XMarkIcon className="h-5 w-5" />
+            </button>
+          </div>
+          <div>
+            {statusList.map((status) => (
+              <button
+                key={status}
+                className={`block w-full px-4 py-2 text-left text-sm hover:bg-blue-50 ${
+                  status === activeStatusMessage.status ? "bg-blue-50 font-semibold text-blue-700" : "text-gray-700"
+                }`}
+                onClick={() => handleStatusSelect(status, activeStatusMessage)}
+                role="menuitem"
+              >
+                {status}
+              </button>
+            ))}
+          </div>
+        </div>,
+        document.body
+      )}
     </Layout>
   );
 }

@@ -130,6 +130,15 @@ html[data-theme="dark"] .message-status-control:focus {
   --tw-ring-offset-color: #111827;
 }
 
+html[data-theme="dark"] .message-status-popover .bg-blue-50,
+html[data-theme="dark"] .message-status-popover .hover\:bg-blue-50:hover {
+  background-color: #1e3a5f !important;
+}
+
+html[data-theme="dark"] .message-status-popover .text-blue-700 {
+  color: #93c5fd !important;
+}
+
 html[data-theme="dark"] input:not([type="checkbox"]):not([type="radio"]),
 html[data-theme="dark"] select,
 html[data-theme="dark"] textarea,
