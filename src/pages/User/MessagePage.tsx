@@ -1461,6 +1461,7 @@ export default function MessagePage() {
                               : "border-yellow-300 bg-yellow-50 text-yellow-800 hover:bg-yellow-100"
                           }`}
                           onClick={() => handleStatusMenuOpen(msg._id)}
+                          onMouseDown={(event) => event.stopPropagation()}
                           type="button"
                           title="Change status"
                           aria-haspopup="menu"
@@ -1486,7 +1487,7 @@ export default function MessagePage() {
                       {statusMenuId === msg._id && (
                         <div
                           ref={menuRef}
-                          className="absolute z-30 mt-2 w-56 bg-white rounded-md border border-gray-200 shadow-lg"
+                          className="absolute right-0 top-full z-30 mt-2 w-56 origin-top-right bg-white rounded-md border border-gray-200 shadow-lg"
                         >
                           <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200">
                             <span className="text-sm font-semibold text-gray-700">Status</span>
