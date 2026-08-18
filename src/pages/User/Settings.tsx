@@ -6,9 +6,12 @@ import GeneralSettings from "../../components/GeneralSettings";
 import TeamMembers from "../../components/TeamMembers";
 import AuditLogSection from "../../components/AuditLogSection";
 import ApprovalRequests from "../../components/ApprovalRequests";
+import { MoonIcon, SunIcon } from "@heroicons/react/24/outline";
+import { useTheme } from "../../context/ThemeContext";
 
 export default function Settings() {
   const { setTitle } = usePageTitle();
+  const { theme, setTheme } = useTheme();
   const [searchParams, setSearchParams] = useSearchParams();
   const [activeTab, setActiveTab] = useState(searchParams.get("tab") || "general");
 
@@ -31,6 +34,34 @@ export default function Settings() {
   return (
     <Layout>
       <div className="p-4 max-w-5xl">
+        <section className="mb-5 border border-gray-300 p-5">
+          <h2 className="text-base font-semibold">Appearance</h2>
+          <div className="mt-4 inline-flex border border-gray-300" role="group" aria-label="Color theme">
+            <button
+              type="button"
+              onClick={() => setTheme("light")}
+              className={`flex h-9 items-center gap-2 px-3 text-sm font-medium transition-colors ${
+                theme === "light" ? "bg-blue-600 text-white" : "bg-white text-gray-700 hover:bg-gray-100"
+              }`}
+              aria-pressed={theme === "light"}
+            >
+              <SunIcon className="h-4 w-4" aria-hidden="true" />
+              Light
+            </button>
+            <button
+              type="button"
+              onClick={() => setTheme("dark")}
+              className={`flex h-9 items-center gap-2 border-l border-gray-300 px-3 text-sm font-medium transition-colors ${
+                theme === "dark" ? "bg-blue-600 text-white" : "bg-white text-gray-700 hover:bg-gray-100"
+              }`}
+              aria-pressed={theme === "dark"}
+            >
+              <MoonIcon className="h-4 w-4" aria-hidden="true" />
+              Dark
+            </button>
+          </div>
+        </section>
+
         {/* Tabs */}
         <div className="mb-5 border-b border-gray-300">
           <div className="flex gap-0">

@@ -12,6 +12,7 @@ import {
   ChevronRightIcon,
 } from "@heroicons/react/24/outline";
 import { clearAuthStorage } from "../utils/authStorage";
+import { useTheme } from "../context/ThemeContext";
 
 interface SidebarProps {
   mobileOpen: boolean;
@@ -34,6 +35,7 @@ interface MenuItem {
 
 export default function Sidebar({ mobileOpen, setMobileOpen }: SidebarProps) {
   const location = useLocation();
+  const { theme } = useTheme();
 
   // User info from localStorage
   let user: User | null = null;
@@ -181,7 +183,11 @@ export default function Sidebar({ mobileOpen, setMobileOpen }: SidebarProps) {
             to="/dashboard"
             onClick={() => setMobileOpen(false)}
           >
-            <img className="h-10 w-auto" src="/logo.png" alt="Attentify logo" />
+            <img
+              className="h-10 w-auto"
+              src={theme === "dark" ? "/logo-dark.png" : "/logo.png"}
+              alt="Attentify logo"
+            />
           </Link>
 
           <div className="flex-1 w-full overflow-y-auto max-h-screen">

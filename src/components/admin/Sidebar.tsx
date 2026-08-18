@@ -8,6 +8,7 @@ import {
   ShieldCheckIcon
 } from "@heroicons/react/24/outline";
 import { clearAuthStorage } from "../../utils/authStorage";
+import { useTheme } from "../../context/ThemeContext";
 
 interface SidebarProps {
   mobileOpen: boolean;
@@ -26,6 +27,7 @@ export default function Sidebar({
   setMobileOpen,
 }: SidebarProps) {
   const location = useLocation();
+  const { theme } = useTheme();
 
   // Get user from localStorage
   let user: User | null = null;
@@ -130,7 +132,11 @@ export default function Sidebar({
             to="/admin/dashboard"
             onClick={() => setMobileOpen(false)}
           >
-            <img className="h-10 w-auto" src="/logo.png" alt="Attentify logo" />
+            <img
+              className="h-10 w-auto"
+              src={theme === "dark" ? "/logo-dark.png" : "/logo.png"}
+              alt="Attentify logo"
+            />
           </Link>
 
           <div className="flex-1 w-full overflow-y-auto max-h-screen">

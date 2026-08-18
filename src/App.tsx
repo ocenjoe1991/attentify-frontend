@@ -38,6 +38,7 @@ import { NotificationProvider } from "./context/NotificationContext";
 import { CompanyProvider } from "./context/CompanyContext";
 import { PageTitleProvider } from "./context/PageTitleContext";
 import { ConfirmDialogProvider } from "./context/ConfirmDialogContext";
+import { ThemeProvider } from "./context/ThemeContext";
 
 import "./App.css";
 
@@ -49,8 +50,9 @@ const PageLoader = () => (
 
 function App() {  
   return (
-    <NotificationProvider>
-      <ConfirmDialogProvider>
+    <ThemeProvider>
+      <NotificationProvider>
+        <ConfirmDialogProvider>
         <UserProvider>
           <CompanyProvider>
             <PageTitleProvider>
@@ -228,8 +230,9 @@ function App() {
             </PageTitleProvider>
           </CompanyProvider>
         </UserProvider>
-      </ConfirmDialogProvider>
-    </NotificationProvider>
+        </ConfirmDialogProvider>
+      </NotificationProvider>
+    </ThemeProvider>
   );
 }
 

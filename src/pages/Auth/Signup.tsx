@@ -4,6 +4,7 @@ import { register } from "../../services/auth";
 import { useUser } from "../../context/UserContext";
 import { useCompany } from "../../context/CompanyContext";
 import { jwtDecode } from "jwt-decode";
+import { useTheme } from "../../context/ThemeContext";
 
 // helper to verify token
 async function verifyInvitationToken(token: string) {
@@ -28,6 +29,7 @@ type JwtPayload = {
 
 export default function Signup() {
   const navigate = useNavigate();
+  const { theme } = useTheme();
   const { setUser } = useUser();
   const { setCompanies, setCurrentCompanyId } = useCompany();
   const [passwordVisible, setPasswordVisible] = useState(false);
@@ -109,7 +111,11 @@ export default function Signup() {
           <div className="flex lg:flex-1">
             <Link to="/" className="-m-1.5 p-1.5">
               <span className="sr-only">Attentify</span>
-              <img className="h-12 w-auto" src="logo.png" alt="Attentify logo" />
+              <img
+                className="h-12 w-auto"
+                src={theme === "dark" ? "/logo-dark.png" : "/logo.png"}
+                alt="Attentify logo"
+              />
             </Link>
           </div>
         </nav>
