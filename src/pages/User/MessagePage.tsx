@@ -708,8 +708,11 @@ export default function MessagePage() {
     const estimatedMenuHeight = 56 + statusList.length * 38;
     const rect = trigger.getBoundingClientRect();
     setStatusMenuPosition({
-      left: Math.max(8, rect.left - menuWidth - 8),
-      top: Math.min(Math.max(8, rect.top), window.innerHeight - estimatedMenuHeight - 8),
+      left: Math.min(
+        window.innerWidth - menuWidth - 8,
+        Math.max(8, rect.right - menuWidth)
+      ),
+      top: Math.min(rect.bottom + 8, window.innerHeight - estimatedMenuHeight - 8),
     });
     setStatusMenuId(id);
     setAssignMenuId(null);
