@@ -450,7 +450,7 @@ const MessageDetailPage = () => {
     <Layout>
       {loading && <div className="p-4">Loading...</div>}
       {!loading && (
-        <div className="flex h-[calc(100vh-5rem)] flex-col overflow-hidden p-3">
+        <div className="message-detail-page flex h-[calc(100vh-5rem)] flex-col overflow-hidden p-3">
           <div className="mb-3 shrink-0">
             <Link
               to="/message"

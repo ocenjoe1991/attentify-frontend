@@ -139,6 +139,27 @@ html[data-theme="dark"] .message-status-popover .text-blue-700 {
   color: #93c5fd !important;
 }
 
+html[data-theme="dark"] .message-detail-page .email-body-frame {
+  background-color: #111827 !important;
+}
+
+html[data-theme="dark"] .email-viewer .prose,
+html[data-theme="dark"] .email-reply-section .ql-editor {
+  color: #e5e7eb;
+}
+
+html[data-theme="dark"] .email-reply-section .ql-toolbar .ql-stroke {
+  stroke: #cbd5e1;
+}
+
+html[data-theme="dark"] .email-reply-section .ql-toolbar .ql-fill {
+  fill: #cbd5e1;
+}
+
+html[data-theme="dark"] .email-reply-section .ql-toolbar .ql-picker {
+  color: #cbd5e1;
+}
+
 html[data-theme="dark"] input:not([type="checkbox"]):not([type="radio"]),
 html[data-theme="dark"] select,
 html[data-theme="dark"] textarea,

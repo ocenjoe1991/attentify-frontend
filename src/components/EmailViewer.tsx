@@ -1,5 +1,6 @@
 import React from "react";
 import DOMPurify from "dompurify";
+import { useTheme } from "../context/ThemeContext";
 import axios from "axios";
 import {
   ArchiveBoxIcon,
@@ -304,6 +305,7 @@ const EmailViewer: React.FC<EmailViewerProps> = ({
   attachments = [],
   //expended,
 }) => {
+  const { theme } = useTheme();
   // Reserve the available body space immediately so a slow iframe load does
   // not make every message card grow from a tiny placeholder.
   const [iframeHeight, setIframeHeight] = React.useState(bodyMaxHeight || 600);
@@ -331,6 +333,13 @@ const EmailViewer: React.FC<EmailViewerProps> = ({
       FORBID_TAGS: ["script", "iframe", "object", "embed"],
     });
 
+    const darkMode = theme === "dark";
+    const background = darkMode ? "#111827" : "#ffffff";
+    const foreground = darkMode ? "#e5e7eb" : "#111827";
+    const muted = darkMode ? "#94a3b8" : "#4b5563";
+    const border = darkMode ? "#42516a" : "#d1d5db";
+    const link = darkMode ? "#93c5fd" : "#2563eb";
+
     return `<!doctype html>
 <html>
   <head>
@@ -341,8 +350,9 @@ const EmailViewer: React.FC<EmailViewerProps> = ({
       html, body {
         margin: 0;
         padding: 0;
-        background: #ffffff;
-        color: #111827;
+        background: ${background};
+        color: ${foreground};
+        color-scheme: ${darkMode ? "dark" : "light"};
         font-family: Arial, Helvetica, sans-serif;
         line-height: 1.5;
       }
@@ -357,6 +367,25 @@ const EmailViewer: React.FC<EmailViewerProps> = ({
       table {
         max-width: 100%;
       }
+      #email-content {
+        min-height: 100%;
+        background: ${background};
+        color: ${foreground};
+      }
+      #email-content a {
+        color: ${link};
+      }
+      ${darkMode ? `
+      #email-content > table,
+      #email-content > div,
+      #email-content > section {
+        color: ${foreground};
+      }
+      #email-content blockquote {
+        border-left-color: ${border} !important;
+        color: ${muted};
+      }
+      ` : ""}
       details.email-quoted-content {
         margin-top: 14px;
       }
@@ -368,8 +397,8 @@ const EmailViewer: React.FC<EmailViewerProps> = ({
         height: 14px;
         cursor: pointer;
         border-radius: 7px;
-        background: #d1d5db;
-        color: #4b5563;
+        background: ${border};
+        color: ${muted};
         font-size: 12px;
         font-weight: 700;
         line-height: 1;
@@ -385,7 +414,7 @@ const EmailViewer: React.FC<EmailViewerProps> = ({
   </head>
   <body><div id="email-content">${sanitizedHtml}</div></body>
 </html>`;
-  }, [htmlBody]);
+  }, [htmlBody, theme]);
   //const [isExpanded, setIsExpanded] = useState(expended);
 
   //const toggleExpand = () => setIsExpanded(prev => !prev);
@@ -541,7 +570,7 @@ const EmailViewer: React.FC<EmailViewerProps> = ({
   };
 
   return (
-    <div className={containerClassName}>
+    <div className={`email-viewer ${containerClassName}`}>
       <header className="flex justify-between items-start mb-4 border-b border-gray-400 pb-4">
         <div>
           <h2 className="text-xl font-bold mb-2">{subject}</h2>
@@ -569,7 +598,7 @@ const EmailViewer: React.FC<EmailViewerProps> = ({
         <iframe
           ref={iframeRef}
           title={`Email body: ${subject}`}
-          className="w-full border-0 bg-white"
+          className="email-body-frame w-full border-0 bg-white"
           srcDoc={emailDocument}
           referrerPolicy="no-referrer"
           style={{ height: bodyMaxHeight ? Math.min(iframeHeight, bodyMaxHeight) : iframeHeight }}

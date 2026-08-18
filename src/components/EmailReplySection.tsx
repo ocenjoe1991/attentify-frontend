@@ -2,6 +2,7 @@ import React, {useState, useEffect, useRef} from "react";
 import axios from "axios";
 import { Editor } from "primereact/editor";
 import { useNotification } from "../context/NotificationContext";
+import { useTheme } from "../context/ThemeContext";
 
 type EmailReplyProps = {
   threadId?: string;
@@ -15,6 +16,7 @@ const EmailReplySection: React.FC<EmailReplyProps> = ({
   onSent
 }) => {
   const { notify } = useNotification();
+  const { theme } = useTheme();
   const [reply, setReply] = useState("");
   const [sending, setSending] = useState(false);
   const [attachments, setAttachments] = useState<File[]>([]);
@@ -105,9 +107,9 @@ const EmailReplySection: React.FC<EmailReplyProps> = ({
 
   return (
     <div className="mt-4">
-      <div className="bg-white border border-gray-300 p-4">
+      <div className="email-reply-section bg-white border border-gray-300 p-4">
         <h3 className="text-lg font-semibold mb-2">Reply</h3>
-        <div className="compact-reply-editor" data-color-mode="light">
+        <div className="compact-reply-editor" data-color-mode={theme}>
           <Editor
             value={reply}
             onTextChange={(e: any) => {
