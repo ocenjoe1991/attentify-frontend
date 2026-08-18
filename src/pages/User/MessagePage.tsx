@@ -294,6 +294,7 @@ export default function MessagePage() {
   const location = useLocation();
   const menuRef = useRef<HTMLDivElement>(null);
   const listScrollRef = useRef<HTMLDivElement>(null);
+  const messageRequestIdRef = useRef(0);
   const [messageTableWidth, setMessageTableWidth] = useState(0);
 
   const [search, setSearch] = useState<string>(cachedParams?.search || "");
@@ -450,6 +451,7 @@ export default function MessagePage() {
     options: { force?: boolean; sortBy?: SortBy; sortOrder?: SortOrder; page?: number } = {}
   ) => {
     if (!currentCompanyId) return;
+    const requestId = ++messageRequestIdRef.current;
 
     const requestParams: MessageListRequestParams = {
       company_id: currentCompanyId,
@@ -498,6 +500,9 @@ export default function MessagePage() {
       const nextMessages = response.data?.messages || [];
       const nextTotalPages = response.data?.totalPages || 1;
 
+      // Ignore a slower previous search after the filters have changed.
+      if (requestId !== messageRequestIdRef.current) return;
+
       setMessages(nextMessages);
       setTotalPages(nextTotalPages);
       preloadMessagePage(nextMessages);
@@ -508,9 +513,11 @@ export default function MessagePage() {
         storedAt: Date.now(),
       };
     } catch (error) {
+      if (requestId !== messageRequestIdRef.current) return;
       console.error("Failed to load messages:", error);
       notify("error", "Failed to load messages");
     } finally {
+      if (requestId !== messageRequestIdRef.current) return;
       setLoading(false);
     }
   };

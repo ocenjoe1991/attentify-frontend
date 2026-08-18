@@ -127,6 +127,7 @@ export default function OrderPage() {
   );
   const [syncingOrders, setSyncingOrders] = useState(false);
   const [syncProgress, setSyncProgress] = useState<SyncProgress | null>(null);
+  const orderRequestIdRef = useRef(0);
 
   const { notify } = useNotification();
   const { setTitle } = usePageTitle();
@@ -213,6 +214,7 @@ export default function OrderPage() {
 
   const fetchOrders = async (options: { force?: boolean } = {}) => {
     if (!currentCompanyId) return;
+    const requestId = ++orderRequestIdRef.current;
 
     const requestParams: OrderListRequestParams = {
       search: debouncedSearch,
@@ -251,6 +253,9 @@ export default function OrderPage() {
       const nextOrders = res.data.orders || [];
       const nextTotalPages = res.data.totalPages || 1;
 
+      // A slower earlier search must not replace the results of a newer search.
+      if (requestId !== orderRequestIdRef.current) return;
+
       setOrders(nextOrders);
       setTotalPages(nextTotalPages);
       preloadOrderPage(currentCompanyId, nextOrders);
@@ -262,9 +267,11 @@ export default function OrderPage() {
         storedAt: Date.now(),
       };
     } catch (err) {
+      if (requestId !== orderRequestIdRef.current) return;
       console.error("Failed to fetch orders", err);
       notify("error", "Failed to fetch orders");
     } finally {
+      if (requestId !== orderRequestIdRef.current) return;
       setHasLoadedOrders(true);
       setLoading(false);
     }
