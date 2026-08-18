@@ -454,12 +454,12 @@ export default function OrderPage() {
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-100">
                   {orders.map((order) => (
-                    <tr key={order.order_id}>
+                    <tr key={order.order_id} className="order-list-row transition-colors hover:bg-gray-50">
                       <td className="py-2 px-3">
                         <Link
                           to={`/order/${encodeURIComponent(String(order.name || order.order_id))}`}
                           state={{ scrollY: window.scrollY }}
-                          className="font-medium text-blue-600 hover:text-blue-700"
+                          className="order-number-link font-medium text-blue-600 hover:text-blue-700"
                           onMouseEnter={() => prefetchOrder(order)}
                           onFocus={() => prefetchOrder(order)}
                           onMouseDown={() => sessionStorage.setItem("orderListScrollY", String(window.scrollY))}

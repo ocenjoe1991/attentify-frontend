@@ -1287,7 +1287,7 @@ export default function MessagePage() {
                 filteredMessages.map((msg, index) => (
                   <tr
                     key={msg._id}
-                    className="group hover:bg-gray-50 transition-all border-b border-gray-100 relative"
+                    className="message-list-row group hover:bg-gray-50 transition-all border-b border-gray-100 relative"
                   >
                     <td className="px-2 py-3">
                       <input
