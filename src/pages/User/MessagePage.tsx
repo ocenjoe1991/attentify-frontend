@@ -1452,7 +1452,8 @@ export default function MessagePage() {
                     </td>}
                     {/* Status */}
                     {messageColumnLayout.showStatus && <td className="px-2 py-3">
-                      {canUpdateStatus ? (
+                      <div className="relative">
+                        {canUpdateStatus ? (
                         // Clickable status button for allowed roles
                         <button
                           className={`message-status-control inline-flex w-full items-center justify-between gap-2 border px-2 py-1.5 text-xs font-semibold shadow-sm transition hover:-translate-y-px hover:shadow focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 ${
@@ -1472,7 +1473,7 @@ export default function MessagePage() {
                             <ChevronDownIcon className="h-3.5 w-3.5" />
                           </span>
                         </button>
-                      ) : (
+                        ) : (
                         // Read-only status display for other roles
                         <span
                           className={`inline-block w-full truncate px-2 py-1 text-xs font-semibold rounded ${
@@ -1481,39 +1482,40 @@ export default function MessagePage() {
                         >
                           {msg.status}
                         </span>
-                      )}
+                        )}
 
-                      {/* Status Menu */}
-                      {statusMenuId === msg._id && (
-                        <div
-                          ref={menuRef}
-                          className="absolute right-0 top-full z-30 mt-2 w-56 origin-top-right bg-white rounded-md border border-gray-200 shadow-lg"
-                        >
-                          <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200">
-                            <span className="text-sm font-semibold text-gray-700">Status</span>
-                            <button
-                              className="ml-2 text-gray-400 hover:text-gray-600"
-                              onClick={() => setStatusMenuId(null)}
-                              aria-label="Close"
-                            >
-                              <XMarkIcon className="h-5 w-5" />
-                            </button>
-                          </div>
-                          <div>
-                            {statusList.map((status) => (
+                        {/* Status Menu */}
+                        {statusMenuId === msg._id && (
+                          <div
+                            ref={menuRef}
+                            className="absolute right-full top-0 z-30 mr-2 w-56 origin-top-right bg-white rounded-md border border-gray-200 shadow-lg"
+                          >
+                            <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200">
+                              <span className="text-sm font-semibold text-gray-700">Status</span>
                               <button
-                                key={status}
-                                className={`block w-full px-4 py-2 text-left text-sm hover:bg-blue-50 ${
-                                  status === msg.status ? "bg-blue-50 font-semibold text-blue-700" : "text-gray-700"
-                                }`}
-                                onClick={() => handleStatusSelect(status, msg)}
+                                className="ml-2 text-gray-400 hover:text-gray-600"
+                                onClick={() => setStatusMenuId(null)}
+                                aria-label="Close"
                               >
-                                {status}
+                                <XMarkIcon className="h-5 w-5" />
                               </button>
-                            ))}
+                            </div>
+                            <div>
+                              {statusList.map((status) => (
+                                <button
+                                  key={status}
+                                  className={`block w-full px-4 py-2 text-left text-sm hover:bg-blue-50 ${
+                                    status === msg.status ? "bg-blue-50 font-semibold text-blue-700" : "text-gray-700"
+                                  }`}
+                                  onClick={() => handleStatusSelect(status, msg)}
+                                >
+                                  {status}
+                                </button>
+                              ))}
+                            </div>
                           </div>
-                        </div>
-                      )}
+                        )}
+                      </div>
                     </td>}
                     {messageColumnLayout.showTicketDate && (
                       <td className="px-2 py-3 text-center text-xs text-gray-500">
