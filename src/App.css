@@ -67,6 +67,12 @@ html[data-theme="dark"] .order-number-link:hover {
   color: #dbeafe !important;
 }
 
+html[data-theme="dark"] .order-sync-progress {
+  background-color: #172b45 !important;
+  border-color: #3f6592 !important;
+  color: #bfdbfe !important;
+}
+
 html[data-theme="dark"] .message-page select,
 html[data-theme="dark"] .message-page select option {
   background-color: #142033;

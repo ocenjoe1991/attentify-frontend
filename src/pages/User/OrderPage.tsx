@@ -419,7 +419,7 @@ export default function OrderPage() {
           </div>
 
           {syncingOrders && (
-            <div className="mb-4 border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-800">
+            <div className="order-sync-progress mb-4 border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-800">
               Syncing {syncProgress?.shop || "Shopify orders"}
               {syncProgress?.synced_count !== undefined
                 ? `: ${syncProgress.synced_count} orders saved`
