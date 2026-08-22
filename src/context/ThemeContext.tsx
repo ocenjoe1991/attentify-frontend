@@ -12,7 +12,7 @@ const THEME_STORAGE_KEY = "attentify.theme";
 const ThemeContext = createContext<ThemeContextValue | undefined>(undefined);
 
 function storedTheme(): Theme {
-  return localStorage.getItem(THEME_STORAGE_KEY) === "dark" ? "dark" : "light";
+  return localStorage.getItem(THEME_STORAGE_KEY) === "light" ? "light" : "dark";
 }
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
