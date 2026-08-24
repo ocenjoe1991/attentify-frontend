@@ -672,11 +672,16 @@ export default function MessagePage() {
           headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
         }
       );
-      const syncedCount = response.data?.result?.reduce(
+      const gmailSyncResults = Array.isArray(response.data?.result)
+        ? response.data.result
+        : response.data?.result?.gmail_sync || [];
+      const orderSync = response.data?.result?.order_sync;
+      const syncedCount = gmailSyncResults.reduce(
         (total: number, item: { stored_count?: number }) => total + (item.stored_count || 0),
         0
       );
-      notify("success", syncedCount ? `Gmail synced. ${syncedCount} new messages added.` : "Gmail synced. No new messages found.");
+      const orderText = orderSync ? ` Orders checked first (${orderSync.synced_orders || 0} updated).` : "";
+      notify("success", syncedCount ? `Gmail synced. ${syncedCount} new messages added.${orderText}` : `Gmail synced. No new messages found.${orderText}`);
       fetchMessages({ force: true });
     } catch (error: any) {
       console.error("Failed to sync Gmail:", error);
