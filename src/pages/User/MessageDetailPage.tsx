@@ -77,6 +77,11 @@ const buildOrderOptions = (orders: any[], mentionedOrderName?: string) => {
 const hasSavedOrderResult = (order?: OrderInfo | null) =>
   Boolean(order?.no_orders || (order?.confirmed && order?.shopify_order));
 
+const shouldRematchOnOpen = (message?: Message | null) => {
+  const status = message?.order_match_status || "";
+  return ["unmatched", "unknown", "possible", "not_order"].includes(status);
+};
+
 const emailAddress = (value?: string) =>
   (value || "").match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i)?.[0].toLowerCase() || "";
 
@@ -234,7 +239,8 @@ const MessageDetailPage = () => {
         console.log("[OrderInfo] Skip: no message content for", message?._id);
         return null;
       }
-      if (hasSavedOrderResult(message.order_info)) {
+      const rematchOnOpen = shouldRematchOnOpen(message);
+      if (hasSavedOrderResult(message.order_info) && !rematchOnOpen) {
         const savedOrderInfo = message.order_info || null;
         setOrderInfo(savedOrderInfo);
         setLoadingOrder(false);
@@ -283,7 +289,7 @@ const MessageDetailPage = () => {
           return noOrdersInfo;
         }
         setLoadingOrder(true);
-        const nextOrderInfo = await fetchOrderInfoCached(message._id);
+        const nextOrderInfo = await fetchOrderInfoCached(message._id, { force: rematchOnOpen });
         console.log("[OrderInfo] Result:", message._id, nextOrderInfo?.order_id || "(no order_id)");
         setOrderInfo(nextOrderInfo);
         if (nextOrderInfo?.order_id) {
