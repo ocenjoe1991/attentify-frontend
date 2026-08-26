@@ -7,6 +7,7 @@ import { usePageTitle } from "../../context/PageTitleContext";
 import { useCompany } from "../../context/CompanyContext";
 import { fetchOrderDetailCached, preloadOrderPage } from "../../utils/orderPreload";
 import { initSocket } from "../../services/socket";
+import { syncDebugLog } from "../../utils/syncDebugLog";
 
 interface Customer {
   id?: string;
@@ -160,12 +161,17 @@ export default function OrderPage() {
     const socket = initSocket();
     const handleSyncProgress = (data: SyncProgress) => {
       if (data.company_id && data.company_id === currentCompanyId) {
+        syncDebugLog("shopify", "Order sync progress", data as unknown as Record<string, unknown>);
         setSyncingOrders(true);
         setSyncProgress(data);
       }
     };
     const handleSyncComplete = (data: { company_id?: string }) => {
       if (data.company_id && data.company_id === currentCompanyId) {
+        syncDebugLog("shopify", "Order sync completed", data);
+        syncDebugLog("ticket", "Recent ticket/order rematch starts after successful Shopify sync", {
+          company_id: data.company_id,
+        });
         setSyncingOrders(false);
         setSyncProgress(null);
         fetchOrders({ force: true });
@@ -303,6 +309,7 @@ export default function OrderPage() {
     setSyncingOrders(true);
     setSyncProgress(null);
     try {
+      syncDebugLog("shopify", "Manual order sync requested", { company_id: currentCompanyId });
       await axios.post(
         `${import.meta.env.VITE_API_URL || ""}/shopify/orders/sync`,
         { company_id: currentCompanyId },
@@ -312,6 +319,10 @@ export default function OrderPage() {
       );
     } catch (err) {
       console.error("Failed to sync orders", err);
+      syncDebugLog("shopify", "Manual order sync failed", {
+        company_id: currentCompanyId,
+        message: err instanceof Error ? err.message : "Unknown error",
+      });
       setSyncingOrders(false);
       notify("error", "Failed to sync orders");
     }

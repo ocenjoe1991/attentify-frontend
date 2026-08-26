@@ -21,6 +21,7 @@ import { useUser } from "../../context/UserContext";
 import { useConfirmDialog } from "../../context/ConfirmDialogContext";
 import { initSocket } from "../../services/socket";
 import { fetchMessageDetailCached, preloadMessagePage } from "../../utils/messagePreload";
+import { syncDebugLog } from "../../utils/syncDebugLog";
 import type { OrderInfo } from "../../types";
 
 interface ChatEntry {
@@ -346,9 +347,12 @@ export default function MessagePage() {
       console.log("Socket connected:", socket.id);
     };
 
-    const handleGmailUpdate = (data: { company_id?: string }) => {
-      console.log("Gmail update:", data);
+    const handleGmailUpdate = (data: { company_id?: string; sync_log?: Record<string, unknown> }) => {
+      syncDebugLog("gmail", "Gmail update received", data);
       if (currentCompanyId && data.company_id && data.company_id !== currentCompanyId) return;
+      if (data.sync_log) {
+        syncDebugLog("ticket", "Ticket update from Gmail push", data.sync_log);
+      }
       messageListCache = null;
       setSortBy("last_updated");
       setSortOrder("desc");
@@ -665,6 +669,7 @@ export default function MessagePage() {
 
     setSyncingGmail(true);
     try {
+      syncDebugLog("gmail", "Manual Gmail sync started", { company_id: currentCompanyId });
       const response = await axios.post(
         `${import.meta.env.VITE_API_URL || ""}/message/fetch-all`,
         { company_id: currentCompanyId },
@@ -676,6 +681,13 @@ export default function MessagePage() {
         ? response.data.result
         : response.data?.result?.gmail_sync || [];
       const orderSync = response.data?.result?.order_sync;
+      syncDebugLog("shopify", "Order sync before Gmail sync completed", orderSync || null);
+      syncDebugLog("gmail", "Manual Gmail sync completed", gmailSyncResults);
+      gmailSyncResults.forEach((item: { ticket_logs?: unknown[]; email?: string }) => {
+        if (Array.isArray(item.ticket_logs) && item.ticket_logs.length) {
+          syncDebugLog("ticket", `Ticket assignment logs for ${item.email || "Gmail account"}`, item.ticket_logs);
+        }
+      });
       const syncedCount = gmailSyncResults.reduce(
         (total: number, item: { stored_count?: number }) => total + (item.stored_count || 0),
         0
@@ -685,6 +697,11 @@ export default function MessagePage() {
       fetchMessages({ force: true });
     } catch (error: any) {
       console.error("Failed to sync Gmail:", error);
+      syncDebugLog("gmail", "Manual Gmail sync failed", {
+        status: error?.response?.status,
+        detail: error?.response?.data?.detail,
+        message: error?.message,
+      });
       const detail = error?.response?.data?.detail;
       const message = Array.isArray(detail)
         ? detail.map((item) => item.message || item.reason).filter(Boolean).join(" ")
