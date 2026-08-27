@@ -17,6 +17,7 @@ const categories = [
 ];
 
 const PAGE_SIZE = 50;
+const DELETE_CONFIRMATION = "I want to delete audit logs for this company";
 
 export default function AuditLogPage() {
   const { currentCompanyId } = useCompany();
@@ -27,6 +28,9 @@ export default function AuditLogPage() {
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(false);
   const [hasMore, setHasMore] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [deleteConfirmation, setDeleteConfirmation] = useState("");
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     setTitle("Audit Log");
@@ -70,23 +74,56 @@ export default function AuditLogPage() {
     fetchLogs(true);
   };
 
+  const handleDeleteLogs = async () => {
+    if (!currentCompanyId || deleteConfirmation.trim() !== DELETE_CONFIRMATION) return;
+
+    setDeleting(true);
+    try {
+      const response = await axios.delete(
+        `${import.meta.env.VITE_API_URL || ""}/company/${currentCompanyId}/audit-logs`,
+        {
+          data: { confirmation: deleteConfirmation.trim() },
+          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+        }
+      );
+      notify("success", `Audit logs deleted. ${response.data?.deleted_count || 0} entries removed.`);
+      setShowDeleteDialog(false);
+      setDeleteConfirmation("");
+      fetchLogs(true);
+    } catch (error: any) {
+      console.error("Failed to delete audit logs:", error);
+      notify("error", error?.response?.data?.detail || "Failed to delete audit logs");
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   return (
     <Layout>
       <div className="p-4">
         <div className="border border-gray-300 bg-white p-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <h3 className="text-lg font-semibold text-gray-800">Audit Log</h3>
-            <form onSubmit={handleSearch} className="flex gap-2">
-              <input
-                value={search}
-                onChange={(event) => setSearch(event.target.value)}
-                placeholder="Search logs"
-                className="w-64 border border-gray-300 px-3 py-2 text-sm"
-              />
-              <button className="bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700">
-                Search
+            <div className="flex flex-wrap items-center gap-2">
+              <form onSubmit={handleSearch} className="flex gap-2">
+                <input
+                  value={search}
+                  onChange={(event) => setSearch(event.target.value)}
+                  placeholder="Search logs"
+                  className="w-64 border border-gray-300 px-3 py-2 text-sm"
+                />
+                <button className="bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700">
+                  Search
+                </button>
+              </form>
+              <button
+                type="button"
+                onClick={() => setShowDeleteDialog(true)}
+                className="border border-red-300 px-4 py-2 text-sm font-medium text-red-700 hover:bg-red-50"
+              >
+                Delete Logs
               </button>
-            </form>
+            </div>
           </div>
 
           <div className="mt-4 flex flex-wrap gap-2">
@@ -130,6 +167,50 @@ export default function AuditLogPage() {
           </div>
         </div>
       </div>
+
+      {showDeleteDialog && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="w-full max-w-lg border border-gray-300 bg-white p-5 shadow-xl">
+            <h3 className="text-lg font-semibold text-gray-900">Delete audit logs</h3>
+            <p className="mt-3 text-sm text-gray-700">
+              This deletes audit logs for the current company only. A deletion record will be kept for accountability.
+            </p>
+            <label className="mt-4 block text-sm font-medium text-gray-800">
+              Type this exact phrase to confirm:
+            </label>
+            <div className="mt-2 border border-gray-300 bg-gray-50 px-3 py-2 text-sm font-semibold text-gray-900">
+              {DELETE_CONFIRMATION}
+            </div>
+            <input
+              value={deleteConfirmation}
+              onChange={(event) => setDeleteConfirmation(event.target.value)}
+              className="mt-3 w-full border border-gray-300 px-3 py-2 text-sm"
+              placeholder={DELETE_CONFIRMATION}
+            />
+            <div className="mt-5 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowDeleteDialog(false);
+                  setDeleteConfirmation("");
+                }}
+                className="border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                disabled={deleting}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleDeleteLogs}
+                disabled={deleting || deleteConfirmation.trim() !== DELETE_CONFIRMATION}
+                className="bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:bg-red-300"
+              >
+                {deleting ? "Deleting..." : "Delete audit logs"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </Layout>
   );
 }

@@ -70,6 +70,7 @@ export const buildLogText = (log: AuditLog, options: { includeDate?: boolean } =
   const updatedMessages = detailValue(log.details, "updated_messages");
   const failedAccounts = detailValue(log.details, "failed_accounts");
   const errors = detailValue(log.details, "errors");
+  const deletedCount = detailValue(log.details, "deleted_count");
 
   if (target) parts.push(`Target: ${target}`);
   if (orderId) parts.push(`Order: ${orderId}`);
@@ -84,6 +85,7 @@ export const buildLogText = (log: AuditLog, options: { includeDate?: boolean } =
   if (updatedMessages) parts.push(`Updated messages: ${updatedMessages}`);
   if (failedAccounts) parts.push(`Failed accounts: ${failedAccounts}`);
   if (errors) parts.push(`Errors: ${errors}`);
+  if (deletedCount) parts.push(`Deleted: ${deletedCount}`);
 
   return parts.join(" - ");
 };
