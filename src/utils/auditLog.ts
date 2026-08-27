@@ -62,12 +62,28 @@ export const buildLogText = (log: AuditLog, options: { includeDate?: boolean } =
   const shop = detailValue(log.details, "shop");
   const email = detailValue(log.details, "email");
   const phoneNumber = detailValue(log.details, "phone_number");
+  const source = detailValue(log.details, "source");
+  const connectedStores = detailValue(log.details, "connected_stores");
+  const syncedShops = detailValue(log.details, "synced_shops");
+  const syncedOrders = detailValue(log.details, "synced_orders");
+  const storedMessages = detailValue(log.details, "stored_messages");
+  const updatedMessages = detailValue(log.details, "updated_messages");
+  const failedAccounts = detailValue(log.details, "failed_accounts");
+  const errors = detailValue(log.details, "errors");
 
   if (target) parts.push(`Target: ${target}`);
   if (orderId) parts.push(`Order: ${orderId}`);
   if (shop) parts.push(`Shop: ${shop}`);
   if (email) parts.push(`Email: ${email}`);
   if (phoneNumber) parts.push(`Phone: ${phoneNumber}`);
+  if (source) parts.push(`Source: ${source}`);
+  if (connectedStores) parts.push(`Connected stores: ${connectedStores}`);
+  if (syncedShops) parts.push(`Synced shops: ${syncedShops}`);
+  if (syncedOrders) parts.push(`Synced orders: ${syncedOrders}`);
+  if (storedMessages) parts.push(`Stored messages: ${storedMessages}`);
+  if (updatedMessages) parts.push(`Updated messages: ${updatedMessages}`);
+  if (failedAccounts) parts.push(`Failed accounts: ${failedAccounts}`);
+  if (errors) parts.push(`Errors: ${errors}`);
 
   return parts.join(" - ");
 };
