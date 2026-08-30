@@ -61,6 +61,7 @@ export const buildLogText = (log: AuditLog, options: { includeDate?: boolean } =
   const orderId = detailValue(log.details, "order_id");
   const shop = detailValue(log.details, "shop");
   const email = detailValue(log.details, "email");
+  const gmailId = detailValue(log.details, "gmail_id");
   const phoneNumber = detailValue(log.details, "phone_number");
   const source = detailValue(log.details, "source");
   const connectedStores = detailValue(log.details, "connected_stores");
@@ -76,6 +77,7 @@ export const buildLogText = (log: AuditLog, options: { includeDate?: boolean } =
   if (orderId) parts.push(`Order: ${orderId}`);
   if (shop) parts.push(`Shop: ${shop}`);
   if (email) parts.push(`Email: ${email}`);
+  if (gmailId) parts.push(`Gmail ID: ${gmailId}`);
   if (phoneNumber) parts.push(`Phone: ${phoneNumber}`);
   if (source) parts.push(`Source: ${source}`);
   if (connectedStores) parts.push(`Connected stores: ${connectedStores}`);
