@@ -59,6 +59,16 @@ html[data-theme="dark"] .order-list-row:hover {
   box-shadow: inset 3px 0 0 #60a5fa;
 }
 
+html[data-theme="dark"] .gmail-account-row:hover {
+  background-color: #24344d !important;
+  box-shadow: inset 3px 0 0 #60a5fa;
+}
+
+html[data-theme="dark"] .gmail-account-delete:hover {
+  background-color: #451f2b !important;
+  color: #fca5a5 !important;
+}
+
 html[data-theme="dark"] .order-number-link {
   color: #93c5fd !important;
 }

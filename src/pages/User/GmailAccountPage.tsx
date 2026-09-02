@@ -141,7 +141,7 @@ export default function GmailAccountPage() {
 
   return (
     <Layout>
-      <div className="p-3">
+      <div className="gmail-account-page p-3">
         <div className="border border-gray-300 p-4">
           <div className="flex justify-between items-center mb-4">
             <h3 className="text-lg font-medium text-gray-700">Gmail Accounts</h3>
@@ -173,7 +173,7 @@ export default function GmailAccountPage() {
                 </thead>
                 <tbody>
                   {accounts.map((account) => (
-                    <tr key={account.id} className="hover:bg-gray-50 border-b border-gray-300">
+                    <tr key={account.id} className="gmail-account-row hover:bg-gray-50 border-b border-gray-300">
                       <td className="px-3 py-2 font-medium">{account.email}</td>
                       <td
                         className={`px-3 py-2 ${
@@ -218,7 +218,7 @@ export default function GmailAccountPage() {
                         <RoleWrapper allowedRoles={["company_owner", "store_owner"]} userRole={user?.role || "agent"}>
                           <button
                             onClick={() => onDelete(account.id)}
-                            className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 transition"
+                            className="gmail-account-delete p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 transition"
                           >
                             <TrashIcon className="w-5 h-5" />
                           </button>
