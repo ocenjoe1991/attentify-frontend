@@ -223,7 +223,7 @@ export default function Dashboard() {
 
   return (
     <Layout>
-      <div className="space-y-5 p-4">
+      <div className="dashboard-page space-y-5 p-4">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-xl font-semibold text-gray-900">Dashboard</h1>

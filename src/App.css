@@ -69,6 +69,39 @@ html[data-theme="dark"] .gmail-account-delete:hover {
   color: #fca5a5 !important;
 }
 
+html[data-theme="dark"] .dashboard-page .hover\:bg-gray-50:hover {
+  background-color: #24344d !important;
+}
+
+html[data-theme="dark"] .dashboard-page .hover\:border-gray-300:hover {
+  border-color: #52617a !important;
+}
+
+html[data-theme="dark"] .dashboard-page .bg-green-50 {
+  background-color: #173b2d !important;
+}
+
+html[data-theme="dark"] .dashboard-page .text-green-700 {
+  color: #86efac !important;
+}
+
+html[data-theme="dark"] .dashboard-page .bg-yellow-50 {
+  background-color: #3f3215 !important;
+}
+
+html[data-theme="dark"] .dashboard-page .text-yellow-700,
+html[data-theme="dark"] .dashboard-page .text-yellow-800 {
+  color: #fde68a !important;
+}
+
+html[data-theme="dark"] .dashboard-page .bg-red-50 {
+  background-color: #451f2b !important;
+}
+
+html[data-theme="dark"] .dashboard-page .text-red-700 {
+  color: #fca5a5 !important;
+}
+
 html[data-theme="dark"] .order-number-link {
   color: #93c5fd !important;
 }
