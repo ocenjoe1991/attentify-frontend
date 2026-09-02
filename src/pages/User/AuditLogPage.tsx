@@ -109,7 +109,7 @@ export default function AuditLogPage() {
                 <input
                   value={search}
                   onChange={(event) => setSearch(event.target.value)}
-                  placeholder="Search logs"
+                  placeholder="Search user, action, ticket, order, email..."
                   className="w-64 border border-gray-300 px-3 py-2 text-sm"
                 />
                 <button className="bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700">
@@ -142,12 +142,15 @@ export default function AuditLogPage() {
             ))}
           </div>
 
-          <div className="mt-4 border border-gray-300 divide-y divide-gray-200">
+          <div
+            className="mt-4 overflow-y-auto overscroll-contain border border-gray-300 divide-y divide-gray-200"
+            style={{ maxHeight: "min(33rem, calc(100vh - 15rem))" }}
+          >
             {logs.length === 0 && !loading ? (
               <div className="p-4 text-sm text-gray-500">No audit log entries found.</div>
             ) : (
               logs.map((log) => (
-                <div key={log._id} className="p-4 text-sm text-gray-700">
+                <div key={log._id} className="flex min-h-11 items-center break-words px-3 py-2 text-sm text-gray-700">
                   {buildLogText(log)}
                 </div>
               ))
