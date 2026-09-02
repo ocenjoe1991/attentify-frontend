@@ -17,7 +17,7 @@ export default function HeaderBar({
 
   return (
     <div className="flex items-center justify-between px-5 h-16 border-b border-gray-300 bg-white z-[9999]">
-      <div className="flex items-center gap-4">
+      <div className="flex min-w-0 items-center gap-4">
         {isMobile && (
           <button
             onClick={onMenuClick}
@@ -27,15 +27,16 @@ export default function HeaderBar({
             Menu
           </button>
         )}
-        <p className="text-md font-semibold">{title}</p>
+        <p className="truncate text-md font-semibold">{title}</p>
       </div>
 
       {showCompanySelector && companies.length > 0 && (
-        <div className="flex items-center gap-4">
+        <div className="ml-4 flex shrink-0 items-center">
           <select
             value={currentCompanyId}
             onChange={(e) => setCurrentCompanyId(e.target.value)}
-            className="border border-gray-300  px-2 py-1 text-sm focus:outline-none focus:ring focus:border-blue-300"
+            aria-label="Current company"
+            className="h-9 w-48 max-w-[45vw] border border-gray-300 px-3 text-sm focus:border-blue-300 focus:outline-none focus:ring"
           >
             {companies.map((company) => (
               <option key={company.id} value={company.id}>

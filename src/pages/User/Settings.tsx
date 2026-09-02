@@ -33,7 +33,7 @@ export default function Settings() {
 
   return (
     <Layout>
-      <div className="p-4 max-w-5xl">
+      <div className="mx-auto w-full max-w-[90rem] p-4">
         <section className="mb-5 border border-gray-300 p-5">
           <h2 className="text-base font-semibold">Appearance</h2>
           <div className="mt-4 inline-flex border border-gray-300" role="group" aria-label="Color theme">
