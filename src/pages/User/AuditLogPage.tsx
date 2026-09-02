@@ -33,7 +33,7 @@ export default function AuditLogPage() {
   const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
-    setTitle("Audit Log");
+    setTitle("Settings");
   }, [setTitle]);
 
   const fetchLogs = async (reset = true) => {
