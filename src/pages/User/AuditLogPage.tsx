@@ -100,9 +100,9 @@ export default function AuditLogPage() {
 
   return (
     <Layout>
-      <div className="p-4">
-        <div className="border border-gray-300 bg-white p-4">
-          <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="box-border h-[calc(100dvh-4.5rem)] min-h-0 p-4">
+        <div className="flex h-full min-h-0 flex-col border border-gray-300 bg-white p-4">
+          <div className="flex shrink-0 flex-wrap items-center justify-between gap-3">
             <h3 className="text-lg font-semibold text-gray-800">Audit Log</h3>
             <div className="flex flex-wrap items-center gap-2">
               <form onSubmit={handleSearch} className="flex gap-2">
@@ -126,7 +126,7 @@ export default function AuditLogPage() {
             </div>
           </div>
 
-          <div className="mt-4 flex flex-wrap gap-2">
+          <div className="mt-4 flex shrink-0 flex-wrap gap-2">
             {categories.map((item) => (
               <button
                 key={item.value}
@@ -143,8 +143,7 @@ export default function AuditLogPage() {
           </div>
 
           <div
-            className="mt-4 overflow-y-auto overscroll-contain border border-gray-300 divide-y divide-gray-200"
-            style={{ maxHeight: "min(33rem, calc(100vh - 15rem))" }}
+            className="mt-4 min-h-0 flex-1 overflow-y-auto overscroll-contain border border-gray-300 divide-y divide-gray-200"
           >
             {logs.length === 0 && !loading ? (
               <div className="p-4 text-sm text-gray-500">No audit log entries found.</div>
@@ -157,8 +156,8 @@ export default function AuditLogPage() {
             )}
           </div>
 
-          <div className="mt-4 flex justify-center">
-            {hasMore && (
+          {hasMore && (
+            <div className="mt-4 flex shrink-0 justify-center">
               <button
                 onClick={() => fetchLogs(false)}
                 disabled={loading}
@@ -166,8 +165,8 @@ export default function AuditLogPage() {
               >
                 {loading ? "Loading..." : "Load more"}
               </button>
-            )}
-          </div>
+            </div>
+          )}
         </div>
       </div>
 
