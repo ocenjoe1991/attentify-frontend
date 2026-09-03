@@ -40,7 +40,7 @@ export const formatLocalDate = (value: string) => {
 
 const detailValue = (details: Record<string, unknown> | undefined, key: string) => {
   const value = details?.[key];
-  return typeof value === "string" || typeof value === "number" ? String(value) : "";
+  return typeof value === "string" || typeof value === "number" || typeof value === "boolean" ? String(value) : "";
 };
 
 export const buildLogText = (log: AuditLog, options: { includeDate?: boolean } = {}) => {
@@ -63,6 +63,11 @@ export const buildLogText = (log: AuditLog, options: { includeDate?: boolean } =
   const email = detailValue(log.details, "email");
   const gmailId = detailValue(log.details, "gmail_id");
   const historyId = detailValue(log.details, "history_id");
+  const syncMode = detailValue(log.details, "sync_mode");
+  const orderSyncTriggered = detailValue(log.details, "order_sync_triggered");
+  const processedMessages = detailValue(log.details, "processed_messages");
+  const skippedMessages = detailValue(log.details, "skipped_messages");
+  const runtime = detailValue(log.details, "runtime");
   const phoneNumber = detailValue(log.details, "phone_number");
   const source = detailValue(log.details, "source");
   const connectedStores = detailValue(log.details, "connected_stores");
@@ -80,6 +85,8 @@ export const buildLogText = (log: AuditLog, options: { includeDate?: boolean } =
   if (email) parts.push(`Email: ${email}`);
   if (gmailId) parts.push(`Gmail ID: ${gmailId}`);
   if (historyId) parts.push(`History ID: ${historyId}`);
+  if (syncMode) parts.push(`Mode: ${syncMode}`);
+  if (orderSyncTriggered) parts.push(`Order sync triggered: ${orderSyncTriggered}`);
   if (phoneNumber) parts.push(`Phone: ${phoneNumber}`);
   if (source) parts.push(`Source: ${source}`);
   if (connectedStores) parts.push(`Connected stores: ${connectedStores}`);
@@ -87,9 +94,12 @@ export const buildLogText = (log: AuditLog, options: { includeDate?: boolean } =
   if (syncedOrders) parts.push(`Synced orders: ${syncedOrders}`);
   if (storedMessages) parts.push(`Stored messages: ${storedMessages}`);
   if (updatedMessages) parts.push(`Updated messages: ${updatedMessages}`);
+  if (processedMessages) parts.push(`Processed messages: ${processedMessages}`);
+  if (skippedMessages) parts.push(`Skipped messages: ${skippedMessages}`);
   if (failedAccounts) parts.push(`Failed accounts: ${failedAccounts}`);
   if (errors) parts.push(`Errors: ${errors}`);
   if (deletedCount) parts.push(`Deleted: ${deletedCount}`);
+  if (runtime) parts.push(`Runtime: ${runtime}`);
 
   return parts.join(" - ");
 };
