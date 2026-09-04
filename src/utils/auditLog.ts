@@ -68,6 +68,8 @@ export const buildLogText = (log: AuditLog, options: { includeDate?: boolean } =
   const processedMessages = detailValue(log.details, "processed_messages");
   const skippedMessages = detailValue(log.details, "skipped_messages");
   const runtime = detailValue(log.details, "runtime");
+  const failureStage = detailValue(log.details, "failure_stage");
+  const errorType = detailValue(log.details, "error_type");
   const phoneNumber = detailValue(log.details, "phone_number");
   const source = detailValue(log.details, "source");
   const connectedStores = detailValue(log.details, "connected_stores");
@@ -100,6 +102,8 @@ export const buildLogText = (log: AuditLog, options: { includeDate?: boolean } =
   if (errors) parts.push(`Errors: ${errors}`);
   if (deletedCount) parts.push(`Deleted: ${deletedCount}`);
   if (runtime) parts.push(`Runtime: ${runtime}`);
+  if (failureStage) parts.push(`Failure stage: ${failureStage}`);
+  if (errorType) parts.push(`Error type: ${errorType}`);
 
   return parts.join(" - ");
 };
